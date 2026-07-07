@@ -1,0 +1,42 @@
+/* tokens.css — Zucci global design tokens (verbatim from styles.css :root).
+   CSS custom properties MUST be global — they are referenced by every
+   scoped component style block. Do not scope this file. */
+
+:root {
+  --zg-bg:         #0A0B0D;
+  --zg-bg-elev:    #0E1013;
+  --zg-panel:      #15171B;
+  --zg-panel-hi:   #1A1D22;
+  --zg-line:       #24272E;
+  --zg-line-soft:  #1C1F24;
+  --zg-text:       #E8EAED;
+  --zg-text-mid:   #A4A9B2;
+  --zg-text-dim:   #7C8189;
+  --zg-text-xdim:  #555A63;
+
+  /* Brand accent — lime (overridable at runtime via useTheme) */
+  --zg-accent:      oklch(0.88 0.19 130);
+  --zg-accent-dim:  oklch(0.68 0.14 130);
+  --zg-accent-tint: oklch(0.88 0.19 130 / 0.14);
+
+  /* Status */
+  --zg-good:   oklch(0.78 0.15 150);
+  --zg-warn:   oklch(0.82 0.15 75);
+  --zg-danger: oklch(0.70 0.18 25);
+
+  /* Map / surfaces */
+  --zg-map-bg:      #0B0D10;
+  --zg-grid:        #161A20;
+  --zg-grid-fine:   #10131783;
+  --zg-land:        #121519;
+  --zg-land-stroke: #1D2128;
+  --zg-zone:        #1A1E24;
+  --zg-muted-line:  #3A3F48;
+
+  --zg-radius-sm: 4px;
+  --zg-radius-md: 6px;
+  --zg-radius-lg: 10px;
+
+  --zg-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --zg-sans: 'Geist', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}

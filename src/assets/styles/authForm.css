@@ -1,0 +1,67 @@
+/* authForm.css — shared form chrome for auth screens.
+   Imported by AuthView so all step screens share these classes.
+   Ported verbatim from styles-auth.css (form + field + button-row region). */
+
+.zauth-form-inner {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: zauth-fade-in 320ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+@keyframes zauth-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zauth-form-inner { animation: none; }
+}
+
+.zauth-title { font-size: 26px; line-height: 1.15; letter-spacing: -0.02em; font-weight: 500; color: var(--zg-text); }
+.zauth-sub { font-size: 13px; color: var(--zg-text-mid); line-height: 1.55; margin-top: 4px; }
+.zauth-sub b { color: var(--zg-text); font-weight: 500; }
+
+.zauth-fields { display: flex; flex-direction: column; gap: 14px; }
+.zauth-field { display: flex; flex-direction: column; gap: 6px; }
+.zauth-label {
+  font-size: 11px; color: var(--zg-text-mid); letter-spacing: 0.04em;
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.zauth-label-link {
+  font-size: 11px; color: var(--zg-text-dim); text-decoration: none; cursor: pointer;
+  background: transparent; border: 0; padding: 0; font-family: inherit;
+}
+.zauth-label-link:hover { color: var(--zg-accent); }
+.zauth-help { font-size: 11px; color: var(--zg-text-dim); line-height: 1.5; }
+
+.zauth-divider {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--zg-mono); font-size: 10px; color: var(--zg-text-xdim);
+  letter-spacing: 0.1em; text-transform: uppercase;
+}
+.zauth-divider::before, .zauth-divider::after { content: ''; flex: 1; height: 1px; background: var(--zg-line); }
+
+.zauth-foot { font-size: 11px; color: var(--zg-text-dim); text-align: center; line-height: 1.6; }
+.zauth-foot a { color: var(--zg-text-mid); text-decoration: none; }
+.zauth-foot a:hover { color: var(--zg-text); }
+
+/* OTP boxes */
+.zauth-otp { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.zauth-otp-box {
+  height: 56px; background: var(--zg-panel); border: 1px solid var(--zg-line);
+  border-radius: var(--zg-radius-md); display: grid; place-items: center;
+  font-family: var(--zg-mono); font-size: 24px; font-weight: 500; color: var(--zg-text);
+  font-variant-numeric: tabular-nums; text-align: center; width: 100%; outline: none;
+  transition: border-color 0.12s, background 0.12s;
+}
+.zauth-otp-box:focus { border-color: var(--zg-accent); background: var(--zg-panel-hi); box-shadow: 0 0 0 3px oklch(0.88 0.19 130 / 0.15); }
+.zauth-otp-box.is-filled { border-color: var(--zg-muted-line); }
+
+.zauth-illust {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: oklch(0.88 0.19 130 / 0.12); border: 1px solid oklch(0.88 0.19 130 / 0.3);
+  display: grid; place-items: center; color: var(--zg-accent); margin-bottom: 4px;
+}
+.zauth-illust--good { background: oklch(0.78 0.15 150 / 0.14); border-color: oklch(0.78 0.15 150 / 0.4); color: var(--zg-good); }
+.zauth-illust--danger { background: oklch(0.70 0.18 25 / 0.12); border-color: oklch(0.70 0.18 25 / 0.4); color: var(--zg-danger); }

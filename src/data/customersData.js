@@ -1,0 +1,130 @@
+// zucci-customers-data.jsx — Customer (Buyer) profiles for Zucci Admin.
+
+const ZC_BUYERS = [
+  {
+    id:'BYR-00441', initials:'AA', color:'oklch(0.55 0.18 250)',
+    firstName:'Abdurahman', lastName:'Abdulmajeed',
+    email:'abdurahman.abdulmajeed@gmail.com', phone:'+966 55 123 4567',
+    altPhone:'+966 50 987 6543', whatsapp:'+966 55 123 4567',
+    country:'SA', city:'Riyadh', language:'ar', currency:'SAR',
+    status:'active', tier:'Gold',
+    dob:'1990-03-15', gender:'Male', nationality:'Saudi',
+    registeredDate:'Nov 10, 2023', lastLogin:'Jun 3, 2026 · 9:44 AM',
+    marketingOptIn:true, smsOptIn:false, pushOptIn:true,
+    buyerScore:88,
+    stats:{ totalOrders:24, totalSpend:14820, avgOrderValue:618, returnRate:4.2, lastOrderDate:'May 28, 2026', lifetimeValue:14820, cancelledOrders:1 },
+    addresses:[
+      { id:'adr1', label:'Home', isDefault:true, firstName:'Abdurahman', lastName:'Abdulmajeed', phone:'+966 55 123 4567', country:'SA', state:'Riyadh Province', city:'Riyadh', district:'Al Malqa', building:'4458', street:'Wadi Naam', postal:'13525', w3w:'///seasonal.words.whispers', lat:24.7811, lng:46.6519 },
+      { id:'adr2', label:'Office', isDefault:false, firstName:'Abdurahman', lastName:'Abdulmajeed', phone:'+966 55 123 4567', country:'SA', state:'Riyadh Province', city:'Riyadh', district:'KAFD', building:'Tower 3', street:'King Fahad Road', postal:'12212', w3w:'///filled.count.soap', lat:24.7634, lng:46.6338 },
+    ],
+    paymentMethods:[
+      { id:'pm1', type:'card', brand:'Mastercard', last4:'3888', expiry:'12/27', isDefault:true, status:'active' },
+      { id:'pm2', type:'card', brand:'Visa',       last4:'4441', expiry:'08/25', isDefault:false, status:'active' },
+      { id:'pm3', type:'wallet', brand:'Apple Pay', last4:null, expiry:null, isDefault:false, status:'active' },
+    ],
+    purchases:[
+      { id:'ORD-88841', date:'May 28, 2026', brand:'Le Maillot',    amount:599.98,  currency:'SAR', status:'delivered',   items:2 },
+      { id:'ORD-88720', date:'May 14, 2026', brand:'Burgandy',      amount:449.99,  currency:'SAR', status:'in_transit',  items:1 },
+      { id:'ORD-88421', date:'Apr 30, 2026', brand:'7 Wonders',     amount:1199.97, currency:'SAR', status:'delivered',   items:3 },
+      { id:'ORD-88290', date:'Apr 12, 2026', brand:'Le Maillot',    amount:299.99,  currency:'SAR', status:'returned',    items:1 },
+      { id:'ORD-88101', date:'Mar 22, 2026', brand:'Burgandy',      amount:899.98,  currency:'SAR', status:'delivered',   items:2 },
+    ],
+    analytics:{
+      topCategories:[ { name:'Swimwear', pct:42 }, { name:'Evening Wear', pct:31 }, { name:"Women's Fashion", pct:27 } ],
+      topBrands:[ { name:'Le Maillot', orders:10 }, { name:'Burgandy', orders:8 }, { name:'7 Wonders', orders:6 } ],
+      purchaseFrequency:'2.1 orders/month',
+      avgDaysBetweenOrders:15,
+      preferredDay:'Saturday',
+      preferredTime:'8–10 PM',
+      deviceBreakdown:{ mobile:78, desktop:22 },
+      returnReasons:[ { reason:'Wrong size', count:1 }, { reason:'Changed mind', count:0 } ],
+    },
+    activityLog:[
+      { actor:'Abdurahman A.', role:'customer', action:'Placed order ORD-88841 · SAR 599.98', time:'May 28, 2026 · 9:44 PM', icon:'check' },
+      { actor:'System',        role:'system',   action:'Order ORD-88720 shipped via Bosta', time:'May 15, 2026 · 8:00 AM', icon:'upload' },
+      { actor:'Abdurahman A.', role:'customer', action:'Submitted return request for ORD-88290', time:'Apr 14, 2026 · 6:12 PM', icon:'alert' },
+      { actor:'Ahmed Khalil',  role:'admin',    action:'Return approved — refund SAR 299.99 issued', time:'Apr 16, 2026 · 11:00 AM', icon:'check' },
+    ],
+    notes:'VIP customer. Gold tier. Prefers evening delivery. Occasionally asks for gift wrapping.',
+  },
+  {
+    id:'BYR-00382', initials:'LH', color:'oklch(0.55 0.18 140)',
+    firstName:'Layla', lastName:'Hassan',
+    email:'layla.hassan@gmail.com', phone:'+971 50 234 5678',
+    altPhone:'', whatsapp:'+971 50 234 5678',
+    country:'AE', city:'Dubai', language:'en', currency:'AED',
+    status:'active', tier:'Silver',
+    dob:'1995-07-22', gender:'Female', nationality:'Emirati',
+    registeredDate:'Feb 14, 2024', lastLogin:'Jun 2, 2026 · 3:15 PM',
+    marketingOptIn:true, smsOptIn:true, pushOptIn:true,
+    buyerScore:72,
+    stats:{ totalOrders:11, totalSpend:6820, avgOrderValue:620, returnRate:9.1, lastOrderDate:'May 20, 2026', lifetimeValue:6820, cancelledOrders:2 },
+    addresses:[
+      { id:'adr10', label:'Home', isDefault:true, firstName:'Layla', lastName:'Hassan', phone:'+971 50 234 5678', country:'AE', state:'Dubai', city:'Dubai Marina', district:'Marina Walk', building:'Bay Central Tower', street:'Marina Promenade', postal:'', w3w:'///fresh.race.walks', lat:25.0819, lng:55.1367 },
+    ],
+    paymentMethods:[
+      { id:'pm10', type:'card', brand:'Visa', last4:'7712', expiry:'03/28', isDefault:true, status:'active' },
+    ],
+    purchases:[
+      { id:'ORD-87991', date:'May 20, 2026', brand:'7 Wonders',  amount:899.00, currency:'AED', status:'delivered', items:2 },
+      { id:'ORD-87810', date:'Apr 5, 2026',  brand:'Amara',      amount:450.00, currency:'AED', status:'returned',  items:1 },
+      { id:'ORD-87621', date:'Mar 12, 2026', brand:'7 Wonders',  amount:1200.00,currency:'AED', status:'delivered', items:3 },
+    ],
+    analytics:{
+      topCategories:[ { name:"Women's Fashion", pct:58 }, { name:'Casual Wear', pct:42 } ],
+      topBrands:[ { name:'7 Wonders', orders:7 }, { name:'Amara', orders:4 } ],
+      purchaseFrequency:'0.9 orders/month',
+      avgDaysBetweenOrders:34,
+      preferredDay:'Friday',
+      preferredTime:'2–4 PM',
+      deviceBreakdown:{ mobile:90, desktop:10 },
+      returnReasons:[ { reason:'Wrong size', count:2 }, { reason:'Quality issue', count:1 } ],
+    },
+    activityLog:[
+      { actor:'Layla H.',    role:'customer', action:'Placed order ORD-87991 · AED 899.00', time:'May 20, 2026 · 2:30 PM', icon:'check' },
+      { actor:'Layla H.',    role:'customer', action:'Submitted return request for ORD-87810', time:'Apr 7, 2026 · 5:00 PM', icon:'alert' },
+    ],
+    notes:'',
+  },
+  {
+    id:'BYR-00291', initials:'NK', color:'oklch(0.55 0.18 30)',
+    firstName:'Nour', lastName:'Khaled',
+    email:'nour.khaled@hotmail.com', phone:'+20 100 333 4444',
+    altPhone:'', whatsapp:'+20 100 333 4444',
+    country:'EG', city:'Cairo', language:'ar', currency:'EGP',
+    status:'active', tier:'Bronze',
+    dob:'1988-11-05', gender:'Female', nationality:'Egyptian',
+    registeredDate:'Jun 8, 2024', lastLogin:'Jun 1, 2026 · 7:22 PM',
+    marketingOptIn:false, smsOptIn:true, pushOptIn:false,
+    buyerScore:54,
+    stats:{ totalOrders:6, totalSpend:9800, avgOrderValue:1633, returnRate:0, lastOrderDate:'May 10, 2026', lifetimeValue:9800, cancelledOrders:0 },
+    addresses:[
+      { id:'adr20', label:'Home', isDefault:true, firstName:'Nour', lastName:'Khaled', phone:'+20 100 333 4444', country:'EG', state:'Cairo', city:'New Cairo', district:'Fifth Settlement', building:'Villa 12', street:'Southern 90 Street', postal:'', w3w:'///crisp.turns.near', lat:30.0271, lng:31.4793 },
+    ],
+    paymentMethods:[
+      { id:'pm20', type:'card', brand:'Visa', last4:'1122', expiry:'09/26', isDefault:true, status:'active' },
+      { id:'pm21', type:'wallet', brand:'Fawry', last4:null, expiry:null, isDefault:false, status:'active' },
+    ],
+    purchases:[
+      { id:'ORD-87201', date:'May 10, 2026',  brand:'Le Maillot', amount:2200.00, currency:'EGP', status:'delivered', items:2 },
+      { id:'ORD-86990', date:'Mar 28, 2026',  brand:'Burgandy',   amount:3600.00, currency:'EGP', status:'delivered', items:3 },
+    ],
+    analytics:{
+      topCategories:[ { name:'Evening Wear', pct:65 }, { name:'Swimwear', pct:35 } ],
+      topBrands:[ { name:'Le Maillot', orders:4 }, { name:'Burgandy', orders:2 } ],
+      purchaseFrequency:'0.5 orders/month',
+      avgDaysBetweenOrders:43,
+      preferredDay:'Thursday',
+      preferredTime:'10 PM–12 AM',
+      deviceBreakdown:{ mobile:65, desktop:35 },
+      returnReasons:[],
+    },
+    activityLog:[
+      { actor:'Nour K.',   role:'customer', action:'Placed order ORD-87201 · EGP 2,200', time:'May 10, 2026 · 10:20 PM', icon:'check' },
+    ],
+    notes:'',
+  },
+];
+
+window.ZC_BUYERS = ZC_BUYERS;
+export { ZC_BUYERS };

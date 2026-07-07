@@ -1,0 +1,34 @@
+/* base.css — global resets (verbatim behaviour from styles.css). */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--zg-bg);
+  color: var(--zg-text);
+  font-family: var(--zg-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: -0.003em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app { height: 100vh; }
+
+button { font-family: inherit; color: inherit; }
+
+a { color: var(--zg-accent); text-decoration: none; }
+a:hover { color: oklch(0.92 0.19 130); }
+
+/* Thin scrollbars, matching the React build */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--zg-line) transparent;
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: var(--zg-line); border-radius: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
