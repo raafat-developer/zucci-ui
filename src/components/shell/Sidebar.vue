@@ -206,9 +206,9 @@ const SUB_PATH = {
   products: {
     "Add New Product": "/admin/products/new",
     "Size Charts": "/admin/products/size-charts",
-    "Size Picker / Fit Finder": "/admin/products/size-charts",
+    "Size Picker / Fit Finder": "/admin/products/fit-finder",
     "Variant Manager": "/admin/products/variants",
-    "Variant Requests": "/admin/products/variants",
+    "Variant Requests": "/admin/products/variant-requests",
   },
 };
 

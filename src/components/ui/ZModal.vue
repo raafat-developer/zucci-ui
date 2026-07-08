@@ -30,8 +30,9 @@ onUnmounted(() => document.removeEventListener('keydown', onKey));
         role="dialog"
       >
         <header v-if="title || $slots.head" class="zmodal-head">
-          <div class="zmodal-title">{{ title }}</div>
-          <button class="zmodal-x" @click="emit('close')" aria-label="Close">×</button>
+          <template v-if="$slots.head"><slot name="head" /></template>
+          <template v-else><div class="zmodal-title">{{ title }}</div></template>
+          <button v-if="!$slots.head" class="zmodal-x" @click="emit('close')" aria-label="Close">×</button>
         </header>
         <div class="zmodal-body"><slot /></div>
         <footer v-if="$slots.footer" class="zmodal-foot"><slot name="footer" /></footer>

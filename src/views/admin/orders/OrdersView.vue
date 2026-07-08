@@ -4,12 +4,19 @@
  * Edit/Print/More), three-column layout (list · detail · panel), the timeline
  * user drawer, and the action drawers. Faithful port of ZucciOrdersModule.
  */
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useOrdersStore } from '@/stores/orders';
 import { ZC_ORDERS_LIST as SEED_LIST, ZC_ORDER_DETAIL as SEED_DETAIL } from '@/data/ordersData';
 import OrderDetail from './OrderDetail.vue';
 import OrderPanel from './OrderPanel.vue';
+import EditOrderDrawer from './EditOrderDrawer.vue';
+import RestockDrawer from './RestockDrawer.vue';
+import CustomerProfileDrawer from './CustomerProfileDrawer.vue';
+import ReturnExchangeDrawer from './ReturnExchangeDrawer.vue';
+import RefundDrawer from './RefundDrawer.vue';
+import StatusHistoryDrawer from './StatusHistoryDrawer.vue';
+import NewOrderModal from './NewOrderModal.vue';
 import ZDrawer from '@/components/ui/ZDrawer.vue';
 import ZButton from '@/components/ui/ZButton.vue';
 
@@ -22,12 +29,14 @@ const ordersList = computed(() => (store.items.length ? store.items : SEED_LIST)
 const selectedId = ref(SEED_DETAIL.id);
 const searchQ = ref('');
 const statusFilter = ref(route.query.status || 'all');
+watch(() => route.query.status, (s) => { statusFilter.value = s || 'all'; });
 const marketFilter = ref('all');
 const dateFilter = ref('');
 const filterOpen = ref(false);
 const printMenuOpen = ref(false);
 const activeDrawer = ref(null);
 const drawerUser = ref(null);
+const profileCustomer = ref(null);
 
 const STATUS_LABEL = { transit:'In Transit', completed:'Completed', cancelled:'Cancelled', progress:'In Progress' };
 
@@ -150,7 +159,7 @@ const drawerTitle = computed(() => {
       <OrderDetail :order="order" @user-click="drawerUser = $event" @status-expand="activeDrawer = 'status-history'" />
 
       <!-- Panel -->
-      <OrderPanel :order="order" @add-tag="(t) => store.addTag(order.id, t)" />
+      <OrderPanel :order="order" @add-tag="(t) => store.addTag(order.id, t)" @view-profile="profileCustomer = $event" />
 
       <!-- Timeline user drawer -->
       <div class="zco-user-drawer" :class="{ 'is-open': drawerUser }">
@@ -171,16 +180,16 @@ const drawerTitle = computed(() => {
     </div>
 
     <!-- Action drawers -->
-    <ZDrawer :open="!!activeDrawer" :title="drawerTitle" subtitle="Order #329929328239" @close="activeDrawer = null">
-      <div style="color:var(--zg-text-mid);font-size:12.5px;line-height:1.6">
-        <template v-if="activeDrawer === 'restock'">Select items to return to stock and confirm quantities.</template>
-        <template v-else-if="activeDrawer === 'return'">Start a return or exchange for one or more line items.</template>
-        <template v-else-if="activeDrawer === 'refund'">Choose refund amount and reason. Customer will be notified.</template>
-        <template v-else-if="activeDrawer === 'edit-order'">Edit shipping address, line items, or quantities.</template>
-        <template v-else-if="activeDrawer === 'status-history'">Full order status history timeline.</template>
-        <template v-else-if="activeDrawer === 'new-order'">Create a manual order on behalf of a customer.</template>
-        <template v-else>Additional order actions.</template>
-      </div>
+    <EditOrderDrawer :open="activeDrawer === 'edit-order'" :order="order" @close="activeDrawer = null" />
+    <RestockDrawer :open="activeDrawer === 'restock'" @close="activeDrawer = null" />
+    <ReturnExchangeDrawer :open="activeDrawer === 'return'" :order="order" @close="activeDrawer = null" />
+    <RefundDrawer :open="activeDrawer === 'refund'" :order="order" @close="activeDrawer = null" />
+    <StatusHistoryDrawer :open="activeDrawer === 'status-history'" :order="order" @close="activeDrawer = null" />
+    <NewOrderModal :open="activeDrawer === 'new-order'" @close="activeDrawer = null" />
+    <CustomerProfileDrawer :open="!!profileCustomer" :customer="profileCustomer" @close="profileCustomer = null" />
+
+    <ZDrawer :open="!!activeDrawer && !['edit-order','restock','return','refund','status-history','new-order'].includes(activeDrawer)" :title="drawerTitle" subtitle="Order #329929328239" @close="activeDrawer = null">
+      <div style="color:var(--zg-text-mid);font-size:12.5px;line-height:1.6">Additional order actions.</div>
       <template #footer>
         <ZButton variant="ghost" @click="activeDrawer = null">Cancel</ZButton>
         <ZButton variant="primary" @click="activeDrawer = null">Confirm</ZButton>

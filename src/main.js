@@ -16,6 +16,8 @@ import './assets/styles/legacy/styles-zucci-orders.css';
 import './assets/styles/legacy/styles-zucci-warehouses.css';
 import './assets/styles/legacy/styles-zucci-finance.css';
 import './assets/styles/legacy/styles-zucci-categories.css';
+import './assets/styles/legacy/styles-zucci-returns.css';
+import './assets/styles/legacy/styles-zucci-discounts.css';
 
 const app = createApp(App);
 app.use(createPinia());

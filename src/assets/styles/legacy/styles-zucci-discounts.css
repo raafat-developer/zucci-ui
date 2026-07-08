@@ -1,0 +1,384 @@
+/* styles-zucci-discounts.css — Discounts & Promotions module */
+
+.zcd-wrap {
+  display: flex; flex-direction: column;
+  width: 100%; height: 100%; min-height: 0; overflow: hidden;
+  background: var(--zg-bg);
+}
+.zcd-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 14px 20px; border-bottom: 1px solid var(--zg-line);
+  background: var(--zg-bg-elev); flex-shrink: 0;
+}
+.zcd-content {
+  flex: 1; overflow-y: auto; min-height: 0;
+  scrollbar-width: thin; scrollbar-color: var(--zg-line) transparent;
+}
+.zcd-tab-body {
+  padding: 16px 20px; display: flex; flex-direction: column; gap: 14px;
+}
+
+/* ── Status badge ───────────────────────────────────────── */
+.zcd-badge {
+  display: inline-flex; align-items: center;
+  font-family: var(--zg-mono); font-size: 9.5px; font-weight: 600;
+  letter-spacing: 0.05em; padding: 2px 8px; border-radius: 999px;
+  white-space: nowrap; flex-shrink: 0;
+}
+
+/* ── Market pill ────────────────────────────────────────── */
+.zcd-market-pill {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-family: var(--zg-mono); font-size: 10px; font-weight: 600;
+  padding: 1px 6px; border-radius: 3px;
+  background: var(--zg-panel-hi); color: var(--zg-text-dim);
+}
+
+/* ── Funding tag ────────────────────────────────────────── */
+.zcd-funding-tag {
+  display: inline-flex; font-family: var(--zg-mono); font-size: 9.5px;
+  font-weight: 600; padding: 2px 7px; border-radius: 4px;
+}
+.zcd-funding-tag.is-zucci  { background: var(--zg-accent-tint); color: var(--zg-accent); }
+.zcd-funding-tag.is-vendor { background: oklch(0.72 0.15 290 / 0.1); color: oklch(0.72 0.15 290); }
+.zcd-funding-tag.is-split  { background: oklch(0.82 0.15 75 / 0.1);  color: var(--zg-warn); }
+
+/* ── Code pill ──────────────────────────────────────────── */
+.zcd-code-pill {
+  font-family: var(--zg-mono); font-size: 10.5px; font-weight: 600;
+  padding: 1px 7px; border-radius: 4px; letter-spacing: 0.06em;
+  background: var(--zg-panel-hi); border: 1px solid var(--zg-line);
+  color: var(--zg-text-mid);
+}
+.zcd-auto-pill {
+  font-family: var(--zg-mono); font-size: 9px; font-weight: 700;
+  padding: 1px 5px; border-radius: 3px;
+  background: var(--zg-accent-tint); color: var(--zg-accent);
+}
+.zcd-time-pill {
+  font-family: var(--zg-mono); font-size: 10.5px;
+  padding: 1px 7px; border-radius: 4px;
+  background: oklch(0.82 0.14 215 / 0.1); color: oklch(0.82 0.14 215);
+}
+
+/* ── Overview promo row ─────────────────────────────────── */
+.zcd-promo-row {
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 14px; background: var(--zg-panel);
+  border: 1px solid var(--zg-line); border-radius: var(--zg-radius-md);
+  transition: background .1s;
+}
+.zcd-promo-row:hover { background: var(--zg-panel-hi); }
+.zcd-promo-main  { flex: 1; min-width: 0; }
+.zcd-promo-name  { font-size: 13px; font-weight: 500; color: var(--zg-text); margin-bottom: 4px; }
+.zcd-promo-meta  { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11.5px; color: var(--zg-text-dim); }
+.zcd-promo-value { font-family: var(--zg-mono); font-size: 12px; font-weight: 600; color: var(--zg-accent); }
+.zcd-promo-stats { display: flex; gap: 20px; flex-shrink: 0; }
+.zcd-stat-val    { font-family: var(--zg-mono); font-size: 12px; font-weight: 600; color: var(--zg-text); margin-top: 2px; }
+.zcd-stat-val.is-neg  { color: var(--zg-danger); }
+.zcd-stat-val.is-good { color: var(--zg-good); }
+
+/* ── Promotions table ───────────────────────────────────── */
+.zcd-table { border: 1px solid var(--zg-line); border-radius: var(--zg-radius-md); overflow: hidden; }
+.zcd-table-head {
+  display: grid;
+  grid-template-columns: 1fr 100px 70px 130px 100px 60px 120px 100px 60px;
+  padding: 8px 12px; background: var(--zg-panel-hi); border-bottom: 1px solid var(--zg-line);
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--zg-text-dim);
+}
+.zcd-table-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 70px 130px 100px 60px 120px 100px 60px;
+  padding: 10px 12px; border-bottom: 1px solid var(--zg-line-soft,#1e1f22);
+  align-items: center; font-size: 12px; color: var(--zg-text-mid); cursor: pointer;
+  transition: background .1s;
+}
+.zcd-table-row:last-child { border-bottom: none; }
+.zcd-table-row:hover { background: var(--zg-panel-hi); }
+
+/* ── Pending dot ────────────────────────────────────────── */
+.zcd-pending-dot {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--zg-danger); color: white;
+  font-size: 9px; font-weight: 700; margin-left: 5px; flex-shrink: 0;
+}
+
+/* ── Vendor promo card ──────────────────────────────────── */
+.zcd-vendor-card {
+  border: 1px solid var(--zg-line); border-radius: var(--zg-radius-md);
+  background: var(--zg-panel); overflow: hidden;
+}
+.zcd-vendor-card-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border-bottom: 1px solid var(--zg-line);
+  background: var(--zg-panel-hi);
+}
+.zcd-vendor-card-body {
+  padding: 12px 14px;
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 8px;
+}
+.zcd-vendor-card-foot {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-top: 1px solid var(--zg-line);
+  background: var(--zg-bg);
+}
+
+/* ── Payment partner card ───────────────────────────────── */
+.zcd-payment-card {
+  border: 1px solid var(--zg-line); border-radius: var(--zg-radius-md);
+  background: var(--zg-panel); overflow: hidden;
+}
+.zcd-payment-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-bottom: 1px solid var(--zg-line);
+  background: var(--zg-panel-hi);
+}
+.zcd-payment-logo {
+  width: 40px; height: 40px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--zg-panel); border: 1px solid var(--zg-line);
+  font-size: 22px; flex-shrink: 0;
+}
+.zcd-payment-info { flex: 1; min-width: 0; }
+.zcd-payment-body {
+  display: grid; grid-template-columns: repeat(6,1fr); gap: 0;
+  padding: 0;
+}
+.zcd-payment-kpi {
+  padding: 10px 14px; border-right: 1px solid var(--zg-line);
+}
+.zcd-payment-kpi:last-child { border-right: none; }
+
+/* ── Approval track ─────────────────────────────────────── */
+.zcd-approval-track {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 14px; border-top: 1px solid var(--zg-line);
+  background: var(--zg-bg); flex-wrap: wrap;
+}
+.zcd-approval-step {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11.5px; font-weight: 500;
+}
+.zcd-approval-step.is-done    { color: var(--zg-good); }
+.zcd-approval-step.is-pending { color: var(--zg-text-dim); }
+
+/* ── Notes strip ────────────────────────────────────────── */
+.zcd-notes-strip {
+  padding: 8px 14px; border-top: 1px solid var(--zg-line);
+  font-size: 11.5px; color: var(--zg-text-dim); background: var(--zg-bg);
+  font-style: italic;
+}
+.zcd-card-foot {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  border-top: 1px solid var(--zg-line); flex-wrap: wrap;
+}
+
+/* ── Campaigns ──────────────────────────────────────────── */
+.zcd-tab-body.campaign-layout { flex-direction: row; padding: 0; }
+.zcd-campaign-list {
+  width: 220px; flex-shrink: 0; border-right: 1px solid var(--zg-line);
+  background: var(--zg-bg-elev); overflow-y: auto;
+}
+.zcd-list-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--zg-line);
+}
+.zcd-campaign-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; width: 100%; background: transparent; border: none;
+  border-bottom: 1px solid var(--zg-line-soft,#1e1f22); cursor: pointer;
+  border-left: 2px solid transparent; transition: all .1s;
+}
+.zcd-campaign-item:hover { background: var(--zg-panel-hi); }
+.zcd-campaign-item.is-active { border-left-color: var(--zg-accent); background: var(--zg-accent-tint); }
+.zcd-campaign-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: grid; place-items: center; font-size: 16px;
+  background: var(--zg-panel); border: 1px solid var(--zg-line);
+  flex-shrink: 0;
+}
+.zcd-campaign-detail {
+  flex: 1; overflow-y: auto; padding: 16px 20px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.zcd-campaign-detail-head {
+  display: flex; align-items: center; gap: 12px;
+  padding-bottom: 14px; border-bottom: 1px solid var(--zg-line);
+}
+.zcd-brand-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 5px; font-size: 12px; font-weight: 500;
+}
+.zcd-brand-pill.is-in  { background: oklch(0.78 0.15 150 / 0.1); color: var(--zg-good); }
+.zcd-brand-pill.is-out { background: oklch(0.70 0.18 25 / 0.08); color: var(--zg-danger); }
+
+/* ── Rules ──────────────────────────────────────────────── */
+.zcd-priority-row {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--zg-line-soft,#1e1f22);
+  position: relative;
+}
+.zcd-priority-row:last-child { border-bottom: none; }
+.zcd-priority-rank {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  background: var(--zg-accent-tint); color: var(--zg-accent);
+  font-family: var(--zg-mono); font-size: 11px; font-weight: 700;
+  display: grid; place-items: center; border: 1px solid oklch(0.88 0.19 130 / 0.3);
+}
+
+/* ── Form grid ──────────────────────────────────────────── */
+.zcd-form-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+
+/* ── Empty state ────────────────────────────────────────── */
+.zcd-empty {
+  padding: 24px; text-align: center; font-size: 13px; color: var(--zg-text-dim);
+}
+
+
+/* ── Market checkbox toggles ─────────────────────────────── */
+.zcd-mkt-check {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--zg-line); background: var(--zg-panel);
+  font-family: var(--zg-sans); font-size: 12px; color: var(--zg-text-dim);
+  transition: all .1s; user-select: none;
+}
+.zcd-mkt-check:hover { border-color: var(--zg-muted-line); color: var(--zg-text); }
+.zcd-mkt-check.is-on  { background: var(--zg-accent-tint); border-color: oklch(0.88 0.19 130 / 0.4); color: var(--zg-accent); }
+
+/* ── Toggle buttons (method selector) ──────────────────── */
+.zcd-toggle-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--zg-line); background: var(--zg-panel);
+  font-family: var(--zg-sans); font-size: 11.5px; color: var(--zg-text-dim);
+  transition: all .1s; user-select: none;
+}
+.zcd-toggle-btn:hover { border-color: var(--zg-muted-line); }
+.zcd-toggle-btn.is-on { background: var(--zg-accent-tint); border-color: oklch(0.88 0.19 130 / 0.4); color: var(--zg-accent); font-weight: 500; }
+
+/* ── Split funding slider ────────────────────────────────── */
+.zcd-split-slider { display: flex; flex-direction: column; gap: 8px; }
+.zcd-split-labels { display: flex; align-items: center; gap: 12px; font-size: 13px; font-family: var(--zg-mono); }
+.zcd-range {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 6px; border-radius: 3px;
+  background: var(--zg-line); outline: none;
+}
+.zcd-range::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--zg-accent); cursor: pointer;
+  box-shadow: 0 0 0 3px oklch(0.88 0.19 130 / 0.25);
+}
+.zcd-split-bar {
+  display: flex; height: 10px; border-radius: 5px; overflow: hidden;
+  border: 1px solid var(--zg-line);
+}
+.zcd-split-fill-zucci  { background: var(--zg-accent); transition: width .1s; }
+.zcd-split-fill-vendor { background: oklch(0.72 0.15 290); flex: 1; transition: width .1s; }
+
+/* ── Automated rule cards ────────────────────────────────── */
+.zcd-auto-rule-card {
+  border: 1px solid var(--zg-line); border-radius: var(--zg-radius-md);
+  background: var(--zg-panel); overflow: hidden;
+}
+.zcd-auto-rule-head {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  cursor: pointer; transition: background .1s;
+}
+.zcd-auto-rule-head:hover { background: var(--zg-panel-hi); }
+.zcd-auto-rule-icon {
+  width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+  display: grid; place-items: center; font-size: 18px; border: 1px solid;
+}
+.zcd-auto-rule-body {
+  padding: 14px; border-top: 1px solid var(--zg-line);
+  background: var(--zg-bg); display: flex; flex-direction: column; gap: 0;
+}
+
+/* ── Trigger timeline ────────────────────────────────────── */
+.zcd-trigger-timeline { display: flex; flex-direction: column; gap: 6px; }
+.zcd-trigger-step {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  background: var(--zg-panel); border: 1px solid var(--zg-line);
+  border-radius: 7px;
+}
+.zcd-trigger-badge {
+  font-family: var(--zg-mono); font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: 4px; flex-shrink: 0;
+  background: var(--zg-accent-tint); color: var(--zg-accent);
+  border: 1px solid oklch(0.88 0.19 130 / 0.3);
+}
+.zcd-trigger-arrow { color: var(--zg-text-dim); font-size: 14px; flex-shrink: 0; }
+.zcd-trigger-action { min-width: 90px; flex-shrink: 0; }
+.zcd-trigger-note { flex: 1; font-size: 11.5px; color: var(--zg-text-dim); }
+.zcd-trigger-add {
+  display: flex; align-items: center; justify-content: center;
+  padding: 7px; border: 1.5px dashed var(--zg-line); border-radius: 7px;
+  font-size: 11.5px; color: var(--zg-accent); cursor: pointer; background: none;
+  transition: all .1s;
+}
+.zcd-trigger-add:hover { background: var(--zg-accent-tint); border-color: var(--zg-accent); }
+
+
+/* ── Analytics bar chart ──────────────────────────────── */
+.zcd-bar-chart {
+  display: flex; align-items: flex-end; gap: 6px;
+  padding: 16px 14px 8px; min-height: 160px;
+  background: var(--zg-panel); border: 1px solid var(--zg-line);
+  border-radius: var(--zg-radius-md); position: relative;
+}
+.zcd-bar-col   { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 4px; }
+.zcd-bar-wrap  { width: 100%; height: 110px; display: flex; align-items: flex-end; gap: 2px; justify-content: center; }
+.zcd-bar-rev   { flex: 1; background: var(--zg-good); border-radius: 3px 3px 0 0; opacity: 0.85; min-height: 3px; transition: height .4s; }
+.zcd-bar-disc  { flex: 1; background: var(--zg-danger); border-radius: 3px 3px 0 0; opacity: 0.7; min-height: 2px; transition: height .4s; }
+.zcd-bar-label { font-size: 10px; color: var(--zg-text-dim); white-space: nowrap; }
+.zcd-bar-orders{ font-family: var(--zg-mono); font-size: 9.5px; color: var(--zg-text-dim); }
+.zcd-bar-legend {
+  position: absolute; top: 10px; right: 14px;
+  display: flex; gap: 12px; font-size: 11px; color: var(--zg-text-dim);
+}
+.zcd-bar-legend span { display: flex; align-items: center; gap: 5px; }
+.zcd-bar-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+
+/* ── Influencer cards ─────────────────────────────────── */
+.zcd-inf-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 14px; background: var(--zg-panel);
+  border: 1px solid var(--zg-line); border-radius: var(--zg-radius-md);
+  cursor: pointer; transition: background .1s;
+}
+.zcd-inf-card:hover { background: var(--zg-panel-hi); }
+.zcd-inf-avatar-wrap { flex-shrink: 0; }
+.zcd-inf-avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 2px solid var(--zg-line); object-fit: cover; display: block;
+}
+.zcd-inf-info { flex: 1; min-width: 0; }
+.zcd-inf-name {
+  font-size: 13px; font-weight: 600; color: var(--zg-text);
+  margin-bottom: 5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.zcd-inf-meta { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.zcd-inf-stats { display: flex; gap: 20px; flex-shrink: 0; }
+
+
+/* ── Campaign tab override (full-height flex row) ──────── */
+.zcd-content > div[style*="flex-direction: row"],
+.zcd-content > div[style*="flexDirection: row"] {
+  flex: 1; overflow: hidden;
+}
+.zcd-campaign-list { height: 100%; }
+.zcd-campaign-detail { overflow-y: auto; }
+
+/* ── Selects in drawers — enforce 32px height ────────────── */
+.zcd-drawer select,
+.zp-field-h[type="select"],
+.zen-invite-select { height: 32px; }
+
+/* ── Promo row cursor pointer ────────────────────────────── */
+.zcd-table-row { cursor: pointer; }

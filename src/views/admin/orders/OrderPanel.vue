@@ -5,19 +5,17 @@
  * "View full profile" → Customers module, and tag add are all wired.
  */
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
 import ZContextMenu from '@/components/ui/ZContextMenu.vue';
 import { toast } from '@/composables/useToast';
 
 const props = defineProps({ order: { type: Object, required: true } });
-const emit = defineEmits(['add-tag']);
-const router = useRouter();
+const emit = defineEmits(['add-tag', 'view-profile']);
 
 const tagInput = ref('');
 const menu = ref(null); // { x, y, items }
 
 const copy = (v, label) => { if (v) navigator.clipboard?.writeText(v).catch(() => {}); toast.success((label || 'Value') + ' copied'); };
-const viewProfile = () => { router.push('/admin/customers'); };
+const viewProfile = () => { emit('view-profile', props.order.customer); };
 
 const openMenu = (e, section) => {
   const r = e.currentTarget.getBoundingClientRect();
