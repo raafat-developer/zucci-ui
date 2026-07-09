@@ -80,20 +80,9 @@ const ITEMS = [
       "Export Data",
     ],
   },
-  {
-    id: "finance",
-    label: "Financial Transactions",
-    icon: "coin",
-    sub: [
-      "Overview / P&L",
-      "Transactions Ledger",
-      "Vendor Payouts",
-      "Gateway Reconciliation",
-      "VAT & Tax",
-      "Cash Flow",
-      "Invoices",
-    ],
-  },
+  { id:"files", label:"Files", icon:"folder", sub:["All Files","Images","Videos","Documents","Media Library"] },
+  { id:"finance", label:"Financial Transactions", icon:"coin", sub:["Overview / P&L","Transactions Ledger","Vendor Payouts","Gateway Reconciliation","VAT & Tax","Cash Flow","Invoices"] },
+  { id:"owners", label:"Owners & Brands", icon:"building", sub:["Individuals","Businesses & Brands","KYB Reviews","Contracts","Onboarding"] },
   {
     id: "customers",
     label: "Customers",
@@ -121,18 +110,8 @@ const ITEMS = [
       "Finance Summary",
     ],
   },
-  {
-    id: "marketplace",
-    label: "Marketplace",
-    icon: "store",
-    sub: [
-      "Listings",
-      "Seller Hub",
-      "Categories",
-      "Commission Rules",
-      "Disputes",
-    ],
-  },
+  { id:"marketplace", label:"Marketplace", icon:"store", sub:["Listings","Seller Hub","Categories","Commission Rules","Disputes"] },
+  { id:"channels", label:"Channels", icon:"layers", sub:["Homepage Config","Page Builder","Navigation Menus","SEO Settings","Redirects"] },
   {
     id: "comms",
     label: "Notifications & Comms",
@@ -145,19 +124,8 @@ const ITEMS = [
       "Delivery Log",
     ],
   },
-  {
-    id: "tickets",
-    label: "Tickets",
-    icon: "ticket",
-    sub: [
-      "All Tickets",
-      "Open",
-      "In Progress",
-      "Resolved",
-      "Escalated",
-      "SLA Breached",
-    ],
-  },
+  { id:"shortlinks", label:"Short Links & Deep Links", icon:"link", sub:["All Links","Campaign Links","Analytics","UTM Builder"] },
+  { id:"tickets", label:"Tickets", icon:"ticket", sub:["All Tickets","Open","In Progress","Resolved","Escalated","SLA Breached"] },
 ];
 
 // Map sub-item label → route query. `status` for Orders filter; `tab` for the
@@ -173,12 +141,14 @@ const SUB_QUERY = {
 const SUB_TAB = {
   finance: {
     "Overview / P&L": "overview",
-    "Transactions Ledger": "ledger",
+    "Transactions Ledger": "transactions",
     "Vendor Payouts": "payouts",
-    "Gateway Reconciliation": "gateways",
-    "VAT & Tax": "vat",
-    "Cash Flow": "cashflow",
-    Invoices: "vat",
+    "Gateway Reconciliation": "reconciliation",
+    "VAT & Tax": "tax-compliance",
+    "Cash Flow": "cash-flow",
+    "Invoices": "tax-compliance",
+    "Storage Costs": "storage-costs",
+    "Reports": "reports",
   },
   marketplace: {
     Listings: "listings",
@@ -201,6 +171,49 @@ const SUB_TAB = {
     "Returns Queue": "alerts",
     "Inbound Shipments": "alerts",
   },
+  discounts: {
+    "Promotions":       "zucci",
+    "Coupons & Codes":  "zucci",
+    "Gift Cards":       "gift-cards",
+    "Campaigns":        "campaigns",
+    "Flash Sales":      "zucci",
+    "Influencers":      "influencers",
+    "Automated Rules":  "automated",
+    "Payment Deals":    "payment",
+  },
+  files: {
+    Images: "images",
+    Videos: "videos",
+    Documents: "documents",
+    "Media Library": "media",
+  },
+  tickets: {
+    Open: "open",
+    "In Progress": "inprogress",
+    Resolved: "resolved",
+    Escalated: "escalated",
+    "SLA Breached": "sla",
+  },
+  owners: {
+    Individuals: "individuals",
+    "Businesses & Brands": "businesses",
+    "KYB Reviews": "kyb",
+    Contracts: "contracts",
+    Onboarding: "onboarding",
+  },
+  channels: {
+    "Homepage Config": "homepage",
+    "Page Builder": "pages",
+    "Navigation Menus": "navigation",
+    "SEO Settings": "seo",
+    Redirects: "redirects",
+  },
+  shortlinks: {
+    "All Links": "all",
+    "Campaign Links": "campaigns",
+    Analytics: "analytics",
+    "UTM Builder": "utm",
+  },
 };
 const SUB_PATH = {
   products: {
@@ -210,25 +223,33 @@ const SUB_PATH = {
     "Variant Manager": "/admin/products/variants",
     "Variant Requests": "/admin/products/variant-requests",
   },
+  discounts: {
+    Bundles: "/admin/discounts/bundles",
+  },
 };
 
 const ICONS = {
-  live: "M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z",
-  box: "M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7",
-  tag: "M20 12l-8 8-9-9V3h8z M7.5 7.5h.01",
-  percent: "M19 5L5 19M6.5 6.5h.01M17.5 17.5h.01",
-  chart: "M4 20V10M10 20V4M16 20v-7M20 20H2",
-  coin: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v10M9 9.5h4a1.5 1.5 0 0 1 0 3h-2a1.5 1.5 0 0 0 0 3h4",
-  people:
-    "M17 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM21 20v-2a4 4 0 0 0-3-3.87",
-  warehouse: "M3 21V9l9-5 9 5v12M3 21h18M8 21v-6h8v6",
-  store: "M4 9h16l-1-5H5L4 9zM4 9v11h16V9M9 20v-6h6v6",
-  comms: "M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
-  ticket: "M4 8V6h16v2a2 2 0 0 0 0 4v2H4v-2a2 2 0 0 0 0-4zM12 6v12",
-  bell: "M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
-  gear: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 3.6 14H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 5 8.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 10 3.6V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 16 5l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 20.4 8H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
-  "panel-open": "M3 4h18v16H3zM9 4v16",
-  "panel-close": "M3 4h18v16H3zM15 4v16",
+  live:        { vb:'0 0 24 24', d:'M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0 M12 12m-8 0a8 8 0 1 0 16 0a8 8 0 1 0-16 0' },
+  box:         { vb:'0 0 24 24', d:'M3 7L12 3L21 7V17L12 21L3 17Z M3 7L12 11L21 7 M12 11V21' },
+  tag:         { vb:'0 0 24 24', d:'M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z M7 7L7.01 7' },
+  percent:     { vb:'0 0 24 24', d:'M19 5L5 19 M6.5 6.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0 M17.5 17.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0' },
+  chart:       { vb:'0 0 24 24', d:'M4 20V4 M4 20H20 M8 16V12 M12 16V8 M16 16V10 M20 16V6' },
+  file:        { vb:'0 0 24 24', d:'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z M14 2L14 8L20 8 M8 13L16 13 M8 17L16 17' },
+  coin:        { vb:'0 0 24 24', d:'M12 12m-8 0a8 8 0 1 0 16 0a8 8 0 1 0-16 0 M15 9C14 8 10 8 10 10C10 12 14 12 14 14C14 16 10 16 9 15 M12 7V17' },
+  people:      { vb:'0 0 24 24', d:'M9 9m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0 M17 10m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0 M3 19C3 15 6 13 9 13C12 13 15 15 15 19 M15 18C15 15 17 14 17.5 14C19 14 21 15.5 21 18' },
+  warehouse:   { vb:'0 0 24 24', d:'M3 10L12 4L21 10V20H3Z M7 20V14H17V20' },
+  store:       { vb:'0 0 24 24', d:'M3 9l1-5h16l1 5 M3 9h18v11a1 1 0 01-1 1H4a1 1 0 01-1-1V9z M9 21V12h6v9' },
+  comms:       { vb:'0 0 24 24', d:'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z' },
+  channels:    { vb:'0 0 24 24', d:'M2 4h14a2 2 0 012 2v6a2 2 0 01-2 2H2V4z M2 10h14 M8 14v4 M5 18h6 M18 8h4a1 1 0 011 1v5a1 1 0 01-1 1h-4V8z M20 15v2' },
+  ticket:      { vb:'0 0 24 24', d:'M2 8h20v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8z M2 8l3-4h14l3 4 M9 12h6' },
+  building:    { vb:'0 0 24 24', d:'M5 21V6L13 3V21 M13 21V10L19 11V21 M5 21H21 M8 9H10 M8 13H10 M8 17H10 M16 14H17 M16 17H17' },
+  link:        { vb:'0 0 24 24', d:'M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71 M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71' },
+  folder:      { vb:'0 0 24 24', d:'M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z' },
+  layers:      { vb:'0 0 24 24', d:'M12 2L2 7l10 5 10-5-10-5 M2 17l10 5 10-5 M2 12l10 5 10-5' },
+  bell:        { vb:'0 0 24 24', d:'M6 9A6 6 0 0118 9V14L20 17H4L6 14Z M10 20A2 2 0 0014 20' },
+  gear:        { vb:'0 0 24 24', d:'M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z' },
+  'panel-open':{ vb:'0 0 24 24', d:'M3 6L21 6 M3 12L14 12 M3 18L14 18 M18 9l3 3-3 3' },
+  'panel-close':{ vb:'0 0 24 24', d:'M3 6L21 6 M3 12L21 12 M3 18L21 18 M21 9l-3 3 3 3' },
 };
 
 const expanded = ref([]);
@@ -271,6 +292,7 @@ const go = (id, sub) => {
   const path = id === "home" ? "/admin/dashboard" : `/admin/${id}`;
   let q;
   if (sub && SUB_QUERY[id]?.[sub]) q = { status: SUB_QUERY[id][sub] };
+  else if (id === 'files' && sub && SUB_TAB.files?.[sub]) q = { folder: SUB_TAB.files[sub] };
   else if (sub && SUB_TAB[id]?.[sub]) q = { tab: SUB_TAB[id][sub] };
   router.push(q ? { path, query: q } : path);
   flyout.value = null;
@@ -437,7 +459,7 @@ const icons = ICONS;
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <path :d="icons[item.icon]" />
+            <path :d="icons[item.icon]?.d || icons[item.icon]" />
           </svg>
           <span v-if="isOpen" class="zg-rail-label">{{ item.label }}</span>
           <svg
@@ -507,7 +529,7 @@ const icons = ICONS;
           stroke-linecap="round"
           stroke-linejoin="round"
         >
-          <path :d="isOpen ? icons['panel-close'] : icons['panel-open']" />
+          <path :d="isOpen ? icons['panel-close']?.d : icons['panel-open']?.d" />
         </svg>
         <span
           v-if="isOpen"
@@ -532,7 +554,7 @@ const icons = ICONS;
           stroke-linecap="round"
           stroke-linejoin="round"
         >
-          <path :d="icons.bell" />
+          <path :d="icons.bell?.d || icons.bell" />
         </svg>
         <span v-if="isOpen" class="zg-rail-label">Notifications</span>
         <span v-else class="zg-rail-tip">Notifications</span>
@@ -553,7 +575,7 @@ const icons = ICONS;
           stroke-linecap="round"
           stroke-linejoin="round"
         >
-          <path :d="icons.gear" />
+          <path :d="icons.gear?.d || icons.gear" />
         </svg>
         <span v-if="isOpen" class="zg-rail-label">Settings</span>
         <span v-else class="zg-rail-tip">Settings</span>

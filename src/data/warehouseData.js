@@ -353,7 +353,18 @@ const ZCW_ACTIVITY = {
   ],
 };
 
+// Add ZCW_INVENTORY_ALL as flat array for InventoryTab
+const ZCW_INVENTORY_ALL = Object.entries(ZCW_INVENTORY).flatMap(([wh_id, items]) =>
+  items.map(i => ({ ...i, warehouse_id: wh_id }))
+);
+
+// ── Finance ops data (referenced by FinanceTab.vue) ─────────
+const ZCW_COST_EVENTS = [];
+const ZCW_VENDOR_COSTS_MTD = [];
+const ZCW_3PL_INVOICES = [];
+
 export {
-  ZCW_TYPE_META, ZCW_STATUS_META, ZCW_WAREHOUSES, ZCW_ZONES, ZCW_INVENTORY,
+  ZCW_TYPE_META, ZCW_STATUS_META, ZCW_WAREHOUSES, ZCW_ZONES, ZCW_INVENTORY, ZCW_INVENTORY_ALL,
   ZCW_INBOUND, ZCW_RETURNS, ZCW_TRANSFERS, ZCW_ALERTS, ZCW_ACTIVITY,
+  ZCW_COST_EVENTS, ZCW_VENDOR_COSTS_MTD, ZCW_3PL_INVOICES,
 };

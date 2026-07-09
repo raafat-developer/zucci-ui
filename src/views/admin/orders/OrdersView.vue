@@ -19,6 +19,10 @@ import StatusHistoryDrawer from './StatusHistoryDrawer.vue';
 import NewOrderModal from './NewOrderModal.vue';
 import ZDrawer from '@/components/ui/ZDrawer.vue';
 import ZButton from '@/components/ui/ZButton.vue';
+import ContextMenuDropdown from './ContextMenuDropdown.vue';
+import CancelOrderDrawer    from './CancelOrderDrawer.vue';
+import EditShippingDrawer   from './EditShippingDrawer.vue';
+import AuditTrailDrawer     from './AuditTrailDrawer.vue';
 
 const route = useRoute();
 const store = useOrdersStore();
@@ -69,8 +73,25 @@ const prints = printItems;
 const statuses = statusChips;
 const mkts = marketChips;
 const labels = STATUS_LABEL;
+const ctxMenu = ref(null);
+
+const moreMenuItems = computed(() => [
+  { label:'View Customer Profile', icon:'M12 12a4 4 0 100-8 4 4 0 000 8zm-8 8a8 8 0 0116 0', action:() => { activeDrawer.value = 'customer-profile'; ctxMenu.value = null; } },
+  { label:'Edit Shipping Address',  icon:'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z', action:() => { activeDrawer.value = 'edit-shipping'; ctxMenu.value = null; } },
+  { label:'Full Audit Trail',       icon:'M4 4h16v16H4zM8 8h8M8 12h8M8 16h5', action:() => { activeDrawer.value = 'audit-trail'; ctxMenu.value = null; } },
+  { divider: true },
+  { label:'Cancel Order',           icon:'M18 6L6 18M6 6l12 12', action:() => { activeDrawer.value = 'cancel-order'; ctxMenu.value = null; }, danger:true },
+]);
+
+function openMoreMenu(e) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const menuW = 224;
+  const x = Math.min(rect.right - menuW, window.innerWidth - menuW - 8);
+  ctxMenu.value = { x: Math.max(8, x), y: rect.bottom + 4 };
+}
+
 const drawerTitle = computed(() => {
-  const t = { 'edit-order':'Edit Order', restock:'Restock Items', return:'Return / Exchange', refund:'Issue Refund', 'status-history':'Status History', 'cancel-order':'Cancel Order' };
+  const t = { 'edit-order':'Edit Order', restock:'Restock Items', return:'Return / Exchange', refund:'Issue Refund', 'status-history':'Status History', 'cancel-order':'Cancel Order', 'edit-shipping':'Edit Shipping', 'audit-trail':'Audit Trail', 'customer-profile':'Customer Profile' };
   return t[activeDrawer.value] || (activeDrawer.value || '').replace(/-/g, ' ');
 });
 </script>
@@ -102,7 +123,7 @@ const drawerTitle = computed(() => {
             </button>
           </div>
         </div>
-        <button class="zco-btn-action" @click="activeDrawer = 'more'">
+        <button class="zco-btn-action" @click="openMoreMenu">
           More actions
           <svg viewBox="0 0 10 10" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5L5 6.5L8 3.5" /></svg>
         </button>
@@ -110,7 +131,7 @@ const drawerTitle = computed(() => {
     </div>
 
     <!-- 3-column layout -->
-    <div class="zco-layout" style="position:relative">
+    <div class="zco-layout" style="position:relative;overflow:hidden;">
       <!-- List -->
       <div class="zco-list">
         <div class="zco-list-search">
@@ -156,10 +177,14 @@ const drawerTitle = computed(() => {
       </div>
 
       <!-- Detail -->
-      <OrderDetail :order="order" @user-click="drawerUser = $event" @status-expand="activeDrawer = 'status-history'" />
+      <div style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+        <OrderDetail :order="order" @user-click="drawerUser = $event" @status-expand="activeDrawer = 'status-history'" @more-click="(section, e) => { if (section === 'cancel-order') activeDrawer = 'cancel-order'; }" />
+      </div>
 
       <!-- Panel -->
-      <OrderPanel :order="order" @add-tag="(t) => store.addTag(order.id, t)" @view-profile="profileCustomer = $event" />
+      <div style="min-height:0;overflow-y:auto;border-left:1px solid var(--zg-line);">
+        <OrderPanel :order="order" @add-tag="(t) => store.addTag(order.id, t)" @view-profile="profileCustomer = $event" />
+      </div>
 
       <!-- Timeline user drawer -->
       <div class="zco-user-drawer" :class="{ 'is-open': drawerUser }">
@@ -180,21 +205,24 @@ const drawerTitle = computed(() => {
     </div>
 
     <!-- Action drawers -->
-    <EditOrderDrawer :open="activeDrawer === 'edit-order'" :order="order" @close="activeDrawer = null" />
-    <RestockDrawer :open="activeDrawer === 'restock'" @close="activeDrawer = null" />
-    <ReturnExchangeDrawer :open="activeDrawer === 'return'" :order="order" @close="activeDrawer = null" />
-    <RefundDrawer :open="activeDrawer === 'refund'" :order="order" @close="activeDrawer = null" />
-    <StatusHistoryDrawer :open="activeDrawer === 'status-history'" :order="order" @close="activeDrawer = null" />
-    <NewOrderModal :open="activeDrawer === 'new-order'" @close="activeDrawer = null" />
-    <CustomerProfileDrawer :open="!!profileCustomer" :customer="profileCustomer" @close="profileCustomer = null" />
+    <EditOrderDrawer       :open="activeDrawer === 'edit-order'"       :order="order"  @close="activeDrawer = null" />
+    <RestockDrawer         :open="activeDrawer === 'restock'"                          @close="activeDrawer = null" />
+    <ReturnExchangeDrawer  :open="activeDrawer === 'return'"            :order="order"  @close="activeDrawer = null" />
+    <RefundDrawer          :open="activeDrawer === 'refund'"            :order="order"  @close="activeDrawer = null" />
+    <StatusHistoryDrawer   :open="activeDrawer === 'status-history'"   :order="order"  @close="activeDrawer = null" />
+    <NewOrderModal         :open="activeDrawer === 'new-order'"                        @close="activeDrawer = null" />
+    <CustomerProfileDrawer :open="activeDrawer === 'customer-profile' || !!profileCustomer" :customer="profileCustomer" @close="activeDrawer = null; profileCustomer = null" />
+    <CancelOrderDrawer     :open="activeDrawer === 'cancel-order'"     :order="order"  @close="activeDrawer = null" />
+    <EditShippingDrawer    :open="activeDrawer === 'edit-shipping'"    :order="order"  @close="activeDrawer = null" />
+    <AuditTrailDrawer      :open="activeDrawer === 'audit-trail'"      :order="order"  @close="activeDrawer = null" />
 
-    <ZDrawer :open="!!activeDrawer && !['edit-order','restock','return','refund','status-history','new-order'].includes(activeDrawer)" :title="drawerTitle" subtitle="Order #329929328239" @close="activeDrawer = null">
-      <div style="color:var(--zg-text-mid);font-size:12.5px;line-height:1.6">Additional order actions.</div>
-      <template #footer>
-        <ZButton variant="ghost" @click="activeDrawer = null">Cancel</ZButton>
-        <ZButton variant="primary" @click="activeDrawer = null">Confirm</ZButton>
-      </template>
-    </ZDrawer>
+    <!-- Context menu for More Actions -->
+    <ContextMenuDropdown
+      v-if="ctxMenu"
+      :items="moreMenuItems"
+      :x="ctxMenu.x" :y="ctxMenu.y"
+      @close="ctxMenu = null"
+    />
   </div>
 </template>
 

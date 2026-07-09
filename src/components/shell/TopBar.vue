@@ -75,8 +75,9 @@
     <!-- Right: clock + refresh -->
     <div class="zg-top-right">
       <div class="zg-clock">
-        <span class="zg-clock-dot"></span
-        ><span class="zg-clock-time">{{ clock }}</span>
+        <span class="zg-clock-dot"></span>
+        <span class="zg-clock-live">LIVE</span>
+        <span class="zg-clock-time">{{ clock }}</span>
       </div>
       <button class="zg-icon-btn" title="Refresh" @click="refresh">
         <svg
@@ -449,6 +450,7 @@ function refresh() {
   display: flex;
   align-items: center;
   gap: 6px;
+  gap: 6px;
   font-family: var(--zg-mono);
   font-size: 12px;
   color: var(--zg-text);
@@ -463,6 +465,24 @@ function refresh() {
   border-radius: 50%;
   background: var(--zg-good);
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--zg-good) 25%, transparent);
+  animation: topbarPulse 1.8s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes topbarPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.35); }
+}
+.zg-clock-live {
+  font-family: var(--zg-mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--zg-good);
+  text-transform: uppercase;
+  background: oklch(0.78 0.15 150 / 0.12);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid oklch(0.78 0.15 150 / 0.25);
 }
 .zg-icon-btn {
   display: inline-flex;
