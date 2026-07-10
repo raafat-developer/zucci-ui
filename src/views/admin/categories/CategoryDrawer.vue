@@ -8,8 +8,35 @@
 import { ref, computed, watch } from 'vue';
 import ZDrawer from '@/components/ui/ZDrawer.vue';
 import { toast } from '@/composables/useToast';
+import { useCategoriesStore } from '@/stores/categories';
+import { useLookup } from '@/composables/useLookup';
+import { uploadFile } from '@/api/files';
 
-const MKTS = ['AE','SA','EG','KW','BH','QA','OM'];
+const MARKET_MAP = {
+  1: 'AE',
+  2: 'SA',
+  3: 'EG',
+  4: 'KW',
+  5: 'BH',
+  6: 'QA',
+  7: 'OM'
+};
+const FALLBACK_MARKETS = [
+  { id: 1, code: 'AE', name: 'UAE' },
+  { id: 2, code: 'SA', name: 'Saudi Arabia' },
+  { id: 3, code: 'EG', name: 'Egypt' },
+  { id: 4, code: 'KW', name: 'Kuwait' },
+  { id: 5, code: 'BH', name: 'Bahrain' },
+  { id: 6, code: 'QA', name: 'Qatar' },
+  { id: 7, code: 'OM', name: 'Oman' },
+];
+const lookup = useLookup();
+const MARKETS = computed(() => {
+  const markets = lookup.get('markets');
+  if (markets.length === 0) return FALLBACK_MARKETS;
+  return markets;
+});
+const categoriesStore = useCategoriesStore();
 const props = defineProps({
   open: { type: Boolean, default: false },
   cat: { type: Object, default: null },
@@ -18,27 +45,147 @@ const props = defineProps({
 });
 const emit = defineEmits(['close', 'save']);
 
-const blank = () => ({
-  label:'', slug:'', description:'', status:'active', private:false, featured:false,
-  seo_title:'', seo_desc:'', seo_slug:'', commission_pct:'', requires_approval:false, listing_requirements:'',
-  markets: Object.fromEntries(MKTS.map((m) => [m, { enabled:false, min_listings:10, commission_pct:15 }])),
+const BANNERS = [
+  { id: 1, label: 'Mobile Banner', desc: 'App category pages', dims: '375 × 200px' },
+  { id: 2, label: 'Homepage Banner', desc: 'Category grid', dims: '600 × 400px' },
+  { id: 3, label: 'Hero Cover', desc: 'Full-width header', dims: '1440 × 400px' },
+];
+
+const FALLBACK_STATUSES = [
+  { id: 161, name: 'Active' },
+  { id: 162, name: 'Inactive' },
+  { id: 163, name: 'Draft' }
+];
+
+const STATUSES = computed(() => {
+  const lookupStatuses = lookup.getStatus('category');
+  return lookupStatuses.length ? lookupStatuses : FALLBACK_STATUSES;
 });
+
+const blank = () => {
+  // Find default active status id from lookup
+  const defaultStatus = STATUSES.value.find(s => s.name?.toLowerCase() === 'active') || STATUSES.value[0];
+  return {
+    label:'', slug:'', description:'', statusId: defaultStatus?.id, private:false, featured:false,
+    seo_title:'', seo_desc:'', seo_slug:'', commission_pct:'', requires_approval:false, listing_requirements:'',
+    markets: Object.fromEntries(MARKETS.value.map((m) => [m.code, { enabled:false, min_listings:10, commission_pct:15 }])),
+    media: BANNERS.map(b => ({ bannerType: b.id, fileId: null, sortOrder: 0, file: null, preview: null })),
+  };
+};
 const v = ref(blank());
 watch(() => [props.open, props.cat?.id], () => {
-  if (props.open) v.value = props.cat ? { ...blank(), ...props.cat, markets: { ...blank().markets, ...(props.cat.markets || {}) }, commission_pct: props.cat.commission_pct ?? '' } : blank();
+  if (props.open) {
+    const initial = blank();
+    if (props.cat) {
+      // Merge existing category data
+      v.value = {
+        ...initial,
+        ...props.cat,
+        statusId: props.cat.statusId,
+        markets: { ...initial.markets, ...(props.cat.markets || {}) },
+        commission_pct: props.cat.commission_pct ?? '',
+        media: initial.media.map((b) => {
+          const existing = props.cat.media?.find(m => m.bannerType === b.bannerType);
+          return existing ? { ...b, ...existing } : b;
+        })
+      };
+    } else {
+      v.value = initial;
+    }
+  }
 });
 
 const isNew = computed(() => !props.cat?.id);
 const valid = computed(() => v.value.label.trim().length > 0);
 const autoSlug = (l) => l.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const onLabel = (e) => { v.value.label = e.target.value; if (isNew.value) v.value.slug = autoSlug(e.target.value); };
-const mkts = MKTS;
+const mkts = computed(() => MARKETS.value.map(m => m.code));
 const reqText = computed({
   get: () => Array.isArray(v.value.listing_requirements) ? v.value.listing_requirements.join('\n') : (v.value.listing_requirements || ''),
   set: (val) => { v.value.listing_requirements = val; },
 });
 const title = computed(() => isNew.value ? (props.parentCat ? `Add sub-category under "${props.parentCat.label}"` : props.isMarketplace ? 'New Marketplace Category' : 'New Category') : `Edit: ${props.cat?.label}`);
-const save = () => { emit('save', v.value); toast.success(`Category ${isNew.value ? 'created' : 'updated'}: ${v.value.label}`); emit('close'); };
+
+const handleFileSelect = async (bannerType, files) => {
+  if (!files.length) return;
+  const file = files[0];
+  try {
+    const mediaIndex = v.value.media.findIndex(m => m.bannerType === bannerType);
+    // Show preview first
+    v.value.media[mediaIndex].preview = URL.createObjectURL(file);
+    // Upload file
+    const response = await uploadFile(file);
+    const fileId = response.data?.id; // Adjust based on actual API response structure
+    if (fileId) {
+      v.value.media[mediaIndex].fileId = fileId;
+      toast.success(`Uploaded ${file.name}`);
+    }
+  } catch (err) {
+    toast.error('Upload failed');
+  }
+};
+
+const save = async () => { 
+  try {
+    // Build API payload
+    const payload = {
+      slug: v.value.slug,
+      translations: [
+        {
+          localeId: 1, // TODO: Make dynamic based on lookups later
+          name: v.value.label,
+          description: v.value.description,
+        },
+      ],
+      statusId: v.value.statusId,
+      featured: v.value.featured,
+      private: v.value.private,
+      markets: Object.entries(v.value.markets)
+        .filter(([code, m]) => m.enabled)
+        .map(([code, m]) => {
+          const marketId = Object.keys(MARKET_MAP).find(id => MARKET_MAP[id] === code);
+          return Number(marketId);
+        }),
+      marketSettings: Object.entries(v.value.markets)
+        .map(([code, m]) => {
+          const marketId = Object.keys(MARKET_MAP).find(id => MARKET_MAP[id] === code);
+          return {
+            marketId: Number(marketId),
+            isActive: m.enabled,
+            minListings: m.min_listings
+          };
+        }),
+      media: v.value.media.filter(m => m.fileId).map(m => ({
+        fileId: m.fileId,
+        bannerType: m.bannerType,
+        sortOrder: m.sortOrder
+      })),
+      seoTitle: v.value.seo_title,
+      metaDescription: v.value.seo_desc,
+      canonicalSlug: v.value.seo_slug
+    };
+
+    if (props.isMarketplace) {
+      // TODO: Add marketplace-specific fields
+    }
+
+    if (props.parentCat) {
+      payload.parentId = props.parentCat.id;
+    }
+
+    if (isNew.value) {
+      await categoriesStore.createCategory(payload);
+    } else {
+      await categoriesStore.updateCategory(props.cat.id, payload);
+    }
+    
+    emit('save', v.value); 
+    toast.success(`Category ${isNew.value ? 'created' : 'updated'}: ${v.value.label}`); 
+    emit('close'); 
+  } catch (err) {
+    toast.error(err.message);
+  }
+};
 </script>
 
 <template>
@@ -53,7 +200,11 @@ const save = () => { emit('save', v.value); toast.success(`Category ${isNew.valu
         <div class="zcat-field"><label class="zcat-label">URL Slug</label><input class="zcat-input" style="font-family:var(--zg-mono)" v-model="v.slug" placeholder="e.g. abayas" /></div>
         <div class="zcat-field">
           <label class="zcat-label">Status</label>
-          <select class="zcat-select" v-model="v.status"><option value="active">Active</option><option value="inactive">Inactive</option><option value="draft">Draft</option></select>
+          <select class="zcat-select" v-model="v.statusId">
+            <option v-for="status in STATUSES" :key="status.id" :value="status.id">
+              {{ status.name }}
+            </option>
+          </select>
         </div>
       </div>
       <div class="zcat-field"><label class="zcat-label">Description</label><textarea class="zcat-textarea" v-model="v.description" placeholder="Short description…" /></div>
@@ -90,13 +241,17 @@ const save = () => { emit('save', v.value); toast.success(`Category ${isNew.valu
 
       <template v-if="!isMarketplace">
         <div class="zcat-form-section-title" style="margin-top:6px">Media</div>
-        <div v-for="b in [['Mobile Banner','App category pages','375 × 200px'],['Homepage Banner','Category grid','600 × 400px'],['Hero Cover','Full-width header','1440 × 400px']]" :key="b[0]" style="display:flex;flex-direction:column;gap:5px">
-          <label style="font-size:11px;font-weight:600;color:var(--zg-text-mid)">{{ b[0] }}</label>
-          <span style="font-size:10px;color:var(--zg-text-dim)">{{ b[1] }} · {{ b[2] }}</span>
-          <div style="height:56px;border:1px dashed var(--zg-line);border-radius:var(--zg-radius-md);display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;background:var(--zg-panel)">
-            <svg viewBox="0 0 14 14" width="13" fill="none" stroke="var(--zg-text-dim)" stroke-width="1.4" stroke-linecap="round"><path d="M7 1v8M4 6l3-3 3 3M2 12h10" /></svg>
-            <span style="font-size:12px;color:var(--zg-text-dim)">Upload image</span>
-          </div>
+        <div v-for="banner in BANNERS" :key="banner.id" style="display:flex;flex-direction:column;gap:5px;margin-bottom:8px">
+          <label style="font-size:11px;font-weight:600;color:var(--zg-text-mid)">{{ banner.label }}</label>
+          <span style="font-size:10px;color:var(--zg-text-dim)">{{ banner.desc }} · {{ banner.dims }}</span>
+          <label style="height:120px;border:1px dashed var(--zg-line);border-radius:var(--zg-radius-md);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;background:var(--zg-panel);overflow:hidden;position:relative">
+            <input type="file" accept="image/*" style="display:none" @change="e => handleFileSelect(banner.id, e.target.files)" />
+            <img v-if="v.media.find(m => m.bannerType === banner.id)?.preview" :src="v.media.find(m => m.bannerType === banner.id).preview" style="position:absolute;inset:0;object-fit:cover;width:100%;height:100%" />
+            <template v-else>
+              <svg viewBox="0 0 14 14" width="24" fill="none" stroke="var(--zg-text-dim)" stroke-width="1.4" stroke-linecap="round"><path d="M7 1v8M4 6l3-3 3 3M2 12h10" /></svg>
+              <span style="font-size:12px;color:var(--zg-text-dim)">Upload image</span>
+            </template>
+          </label>
         </div>
         <div class="zcat-form-section-title" style="margin-top:6px">SEO</div>
         <div class="zcat-field"><label class="zcat-label">SEO Title</label><input class="zcat-input" v-model="v.seo_title" placeholder="Page title (50–60 chars)" /></div>

@@ -3,8 +3,11 @@
  * AuthFlow — resolves the current step (from the :step route param) to its
  * screen component and wires the shared navigation events. Mirrors the
  * STEPS render(go) map from Zucci Auth.html, but router-driven.
+ *
+ * Email entered on SignInIdentity is passed to SignInPassword as a prop,
+ * and both values are used for the real auth.login() call.
  */
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { findStep } from '@/data/authSteps';
 import { useAuthStore } from '@/stores/auth';
@@ -33,6 +36,10 @@ const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
 
+// ── Form state threaded across steps ──────────────────────
+const userEmail = ref('');
+const userPassword = ref('');
+
 const step = computed(() => findStep(route.params.step));
 const current = computed(() => SCREENS[step.value.screen] || SignInIdentity);
 
@@ -49,17 +56,37 @@ const NAV = {
   'reset':       { next: 'signin-id', back: 'signin-id' },
 };
 
-async function handle(event) {
+async function handle(event, payload) {
   const map = NAV[step.value.id] || {};
   const target = map[event];
   if (!target) return;
-  // Authenticate the session when the password step advances (mock login).
-  if (step.value.id === 'signin-pw' && event === 'next') {
-    try { await auth.login({ email: 'layla.haddad@zucci.com', password: 'admin' }); }
-    catch { /* stay on step; error surfaced via auth.error */ return; }
+
+  // Capture form data emitted from child screens.
+  if (step.value.id === 'signin-id' && event === 'next' && payload?.email) {
+    userEmail.value = payload.email;
   }
+  if (step.value.id === 'signin-pw' && event === 'next' && payload?.password) {
+    userPassword.value = payload.password;
+  }
+
+  // Authenticate the session when the password step advances.
+  if (step.value.id === 'signin-pw' && event === 'next') {
+    try {
+      await auth.login({ email: userEmail.value, password: userPassword.value });
+    } catch {
+      // Stay on step; error surfaced via auth.error in the SignInPassword screen
+      return;
+    }
+  }
+
   if (target === 'dashboard') {
-    if (!auth.isAuthenticated) { try { await auth.login({ email: 'layla.haddad@zucci.com', password: 'admin' }); } catch { return; } }
+    if (!auth.isAuthenticated) {
+      try {
+        await auth.login({ email: userEmail.value, password: userPassword.value });
+      } catch {
+        return;
+      }
+    }
     const redirect = route.query.redirect;
     router.push(redirect || (auth.role === 'supplier' ? '/supplier/dashboard' : '/admin/dashboard'));
   } else {
@@ -71,8 +98,9 @@ async function handle(event) {
 <template>
   <component
     :is="current"
-    @next="handle('next')"
-    @back="handle('back')"
+    :email="userEmail"
+    @next="handle('next', $event)"
+    @back="handle('back', $event)"
     @forgot="handle('forgot')"
     @backup="handle('backup')"
     @skip="handle('skip')"

@@ -1,17 +1,21 @@
 <script setup>
 /**
  * SignInIdentity — step 01. Ported from ZucciSignInIdentity (zucci-auth.jsx).
- * Uses shared ZButton / ZInput / ZStepMarker. Emits `next`.
+ * Uses shared ZButton / ZInput / ZStepMarker. Emits `next` with the email.
  */
 import { ref } from 'vue';
 import ZButton from '@/components/ui/ZButton.vue';
 import ZInput from '@/components/ui/ZInput.vue';
 import ZStepMarker from '@/components/ui/ZStepMarker.vue';
 
-defineEmits(['next']);
+const emit = defineEmits(['next']);
 
-const email = ref('layla.haddad@zucci.com');
-const uid = ref('4178');
+const email = ref('');
+const uid = ref('');
+
+function onNext() {
+  emit('next', { email: email.value });
+}
 </script>
 
 <template>
@@ -34,7 +38,7 @@ const uid = ref('4178');
     </div>
   </div>
 
-  <ZButton variant="primary" full @click="$emit('next')">Continue →</ZButton>
+  <ZButton variant="primary" full @click="onNext">Continue →</ZButton>
 
   <div class="zauth-divider">or</div>
 

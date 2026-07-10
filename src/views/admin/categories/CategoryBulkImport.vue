@@ -6,30 +6,130 @@
 import { ref, watch } from 'vue';
 import ZModal from '@/components/ui/ZModal.vue';
 import { toast } from '@/composables/useToast';
+import { useCategoriesStore } from '@/stores/categories';
+import { exportCsv } from '@/utils/exportCsv';
 
 const props = defineProps({ open: { type: Boolean, default: false }, tab: { type: String, default: 'products' } });
 const emit = defineEmits(['close']);
+
+const categoriesStore = useCategoriesStore();
 
 const phase = ref('upload');
 const preview = ref([]);
 const error = ref('');
 const fileRef = ref(null);
+const selectedFile = ref(null);
 
-watch(() => props.open, (v) => { if (v) { phase.value = 'upload'; preview.value = []; error.value = ''; } });
+watch(() => props.open, (v) => { if (v) { phase.value = 'upload'; preview.value = []; error.value = ''; selectedFile.value = null; } });
 
 const sampleCsv = (tab) => tab === 'products'
-  ? 'slug,label,parent_slug,status,private,featured\nwomens-fashion,Women\'s Fashion,,active,false,true\nabayas,Abayas,womens-fashion,active,false,false'
+  ? 'slug,name,parent_slug,status_id,is_featured,is_private,fit_finder_size_guide_code\nwomens-fashion,Women\'s Fashion,,161,1,0,\nabayas,Abayas,womens-fashion,161,0,0,'
   : 'slug,label,mapped_to_slug,commission_pct,requires_approval,status\nwomen-clothing,Women — Clothing,womens-fashion,15,true,active';
-const downloadCsv = (filename, csv) => { const b = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = filename; a.click(); };
-const parseCsv = (text) => { const [header, ...rows] = text.trim().split('\n'); const keys = header.split(',').map((k) => k.trim()); return rows.map((row) => { const vals = row.split(',').map((v) => v.trim().replace(/^"|"$/g, '')); return Object.fromEntries(keys.map((k, i) => [k, vals[i] || ''])); }); };
+
+const downloadSample = async () => {
+  try {
+    const filename = `categories-sample-${props.tab}.csv`;
+    const csvText = sampleCsv(props.tab);
+    // Create a blob and use our export utility
+    const blob = new Blob(['\ufeff' + csvText], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (e) {
+    toast.error('Failed to download sample CSV');
+  }
+};
+
+// Helper to parse CSV (handles both commas and semicolons)
+const parseCsv = (text) => {
+  // Normalize line endings
+  const normalizedText = text.replace(/\r?\n/g, '\n').trim();
+  if (!normalizedText) return [];
+  
+  const lines = normalizedText.split('\n');
+  if (lines.length < 2) return [];
+  
+  // Determine if we should split by semicolon or comma
+  const firstLine = lines[0];
+  const hasSemicolons = firstLine.includes(';');
+  const delimiter = hasSemicolons ? ';' : ',';
+  
+  const keys = firstLine.split(delimiter).map((k) => k.trim());
+  return lines.slice(1).map((row) => {
+    const vals = row.split(delimiter).map((v) => v.trim().replace(/^"|"$/g, ''));
+    return Object.fromEntries(keys.map((k, i) => [k, vals[i] || '']));
+  });
+};
+
+const validateFile = (file) => {
+  if (!file) {
+    return { valid: false, error: 'No file selected' };
+  }
+  
+  // Check file extension
+  const allowedExtensions = ['.csv', '.CSV'];
+  const hasValidExtension = allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+  
+  // Check MIME type
+  const allowedMimeTypes = [
+    'text/csv',
+    'application/csv',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain'
+  ];
+  const hasValidMimeType = allowedMimeTypes.includes(file.type) || hasValidExtension;
+  
+  if (!hasValidExtension && !hasValidMimeType) {
+    return { valid: false, error: 'Please select a valid CSV file' };
+  }
+  
+  return { valid: true };
+};
 
 const handleFile = (e) => {
-  const f = e.target.files[0]; if (!f) return;
+  const f = e.target.files[0];
+  if (!f) return;
+  
+  const validation = validateFile(f);
+  if (!validation.valid) {
+    error.value = validation.error;
+    return;
+  }
+  
+  selectedFile.value = f;
   const reader = new FileReader();
-  reader.onload = (ev) => { try { preview.value = parseCsv(ev.target.result); phase.value = 'preview'; error.value = ''; } catch { error.value = 'Could not parse CSV'; } };
+  reader.onload = (ev) => {
+    try {
+      preview.value = parseCsv(ev.target.result);
+      phase.value = 'preview';
+      error.value = '';
+    } catch {
+      error.value = 'Could not parse CSV file';
+    }
+  };
+  reader.onerror = () => {
+    error.value = 'Error reading file';
+  };
   reader.readAsText(f);
 };
-const doImport = () => { phase.value = 'done'; toast.success(`${preview.value.length} categories imported`); };
+
+const doImport = async () => {
+  try {
+    await categoriesStore.importCategories(selectedFile.value);
+    phase.value = 'done';
+    toast.success(`${preview.value.length} categories imported successfully`);
+  } catch (err) {
+    error.value = 'Failed to import categories. Please try again.';
+    toast.error(error.value);
+  }
+};
+
 const cols = () => Object.keys(preview.value[0] || {});
 </script>
 
@@ -47,7 +147,7 @@ const cols = () => Object.keys(preview.value[0] || {});
         <div style="padding:10px 14px;background:var(--zg-panel);border:1px solid var(--zg-line);border-radius:var(--zg-radius-md);font-size:12px;color:var(--zg-text-dim);line-height:1.6">
           Upload a CSV file to create or update categories in bulk. Download the sample to see the expected structure.
         </div>
-        <button class="zwh-btn-ghost" style="width:fit-content" @click="downloadCsv(`categories-sample-${tab}.csv`, sampleCsv(tab))">Download sample CSV</button>
+        <button class="zwh-btn-ghost" style="width:fit-content" @click="downloadSample">Download sample CSV</button>
         <div style="border:2px dashed var(--zg-line);border-radius:var(--zg-radius-md);padding:32px 20px;text-align:center;cursor:pointer" @click="fileRef.click()">
           <svg viewBox="0 0 24 24" width="28" fill="none" stroke="var(--zg-text-xdim)" stroke-width="1.5" stroke-linecap="round" style="display:block;margin:0 auto 8px"><path d="M12 3v12M8 9l4-4 4 4M3 20h18" /></svg>
           <div style="font-size:13px;color:var(--zg-text-mid);font-weight:600">Click to choose CSV file</div>

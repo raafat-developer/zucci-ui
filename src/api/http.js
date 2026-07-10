@@ -4,9 +4,8 @@
 // as a Bearer header; the response interceptor unwraps the payload and handles
 // 401 (clear session + redirect to auth) and normalizes errors.
 //
-// While there is no backend, requests are served by the mock adapter
-// (src/api/mock.js). Flip USE_MOCK to false — or set VITE_API_BASE — to hit a
-// real API with ZERO changes to the stores or views.
+// Set VITE_API_BASE in .env to point to the real API. To use the in-memory mock
+// instead (offline dev), set VITE_USE_MOCK=true.
 
 import axios from 'axios';
 import Cookies from 'js-cookie';
@@ -14,7 +13,7 @@ import { mockAdapter } from './mock';
 
 export const TOKEN_COOKIE = 'zucci_token';
 export const USER_COOKIE = 'zucci_user';
-export const USE_MOCK = !import.meta.env.VITE_API_BASE;
+export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
 export const tokenStore = {
   get: () => Cookies.get(TOKEN_COOKIE) || null,
@@ -25,19 +24,24 @@ export const tokenStore = {
 };
 
 const http = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || '/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE || 'https://api.zucci.xyz/api/v1/',
   timeout: 20000,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Use the in-memory mock adapter until a real backend is wired.
+// Use the in-memory mock adapter only when explicitly opted-in.
 if (USE_MOCK) http.defaults.adapter = mockAdapter;
 
-// ── Request: attach bearer token ──────────────────────────
+// ── Request: attach bearer token + global custom headers ──
 http.interceptors.request.use(
   (config) => {
     const token = tokenStore.get();
     if (token) config.headers.Authorization = `Bearer ${token}`;
+
+    // Global headers required by the Zucci API
+    config.headers['X-Locale-Id'] = config.headers['X-Locale-Id'] || '1';
+    config.headers['X-Market-Id'] = config.headers['X-Market-Id'] || '1';
+
     return config;
   },
   (error) => Promise.reject(error),
@@ -48,7 +52,13 @@ let onUnauthorized = null;
 export const setUnauthorizedHandler = (fn) => { onUnauthorized = fn; };
 
 http.interceptors.response.use(
-  (response) => response.data,
+  (response) => {
+    // For blob responses, return full response (so we can get headers too
+    if (response.config.responseType === 'blob') {
+      return response;
+    }
+    return response.data;
+  },
   (error) => {
     const status = error.response?.status;
     if (status === 401) {

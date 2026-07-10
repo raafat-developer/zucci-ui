@@ -1,323 +1,345 @@
 <template>
   <div class="zp-wrap">
-    <ProductsHeader 
-      :products-count="PRODUCTS.length" 
-      @add-product="$router.push({name:'add-product'})"
+    <ProductsHeader
+      :products-count="productsCount"
+      :brands-count="brands.length"
+      @export="handleExport"
+      @import="importOpen = true"
+      @add-product="router.push({ name: 'product-new' })"
     />
 
-    <ProductsTabs 
-      :tabs="STATUS_TABS"
+    <ProductsTabs
+      :tabs="statusTabs"
       :current-tab="statusTab"
       :tab-counts="tabCounts"
-      :status-meta="STATUS_META"
       @update:current-tab="statusTab = $event"
     />
 
-    <ProductsFilters 
+    <ProductsFilters
       :search-value="search"
       :filters="filters"
+      :vendors="vendors"
+      :brands="brands"
+      :categories="categories"
+      :markets="markets"
       @update:search-value="search = $event"
       @update:filters="filters = $event"
     />
 
-    <ProductsTable 
+    <ProductsTable
       :products="filtered"
       :selected-ids="selectedIds"
-      :status-meta="STATUS_META"
+      :bulk-action="bulkAction"
+      :bulk-action-options="bulkActionOptions"
+      :loading="store.loading || store.saving"
+      :error="store.error"
+      :status-meta="statusMeta"
+      :approval-meta="approvalMeta"
+      :sync-meta="syncMeta"
+      :markets="markets"
+      @update:bulk-action="bulkAction = $event"
+      @apply-bulk="applyBulk"
+      @clear-selection="selectedIds = []"
       @toggle-all="toggleAll"
       @toggle-select="toggleSelect"
+      @open-product="openProduct"
     />
+
+    <div v-if="store.lastPage > 1" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;border-top:1px solid var(--zg-line);background:var(--zg-panel);margin-top:16px;">
+      <Paginator
+        :rows="store.perPage"
+        :totalRecords="store.total"
+        :first="(store.page - 1) * store.perPage"
+        @page="onPageChange"
+      />
+    </div>
+
+    <ProductBulkImport :open="importOpen" @close="importOpen = false" />
   </div>
 </template>
+
 <script setup>
-import { ref, computed } from "vue";
-import ProductsHeader from '../../../components/admin/products/ProductsHeader.vue';
-import ProductsTabs from '../../../components/admin/products/ProductsTabs.vue';
-import ProductsFilters from '../../../components/admin/products/ProductsFilters.vue';
-import ProductsTable from '../../../components/admin/products/ProductsTable.vue';
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import ProductsFilters from '@/components/admin/products/ProductsFilters.vue'
+import ProductsHeader from '@/components/admin/products/ProductsHeader.vue'
+import ProductsTable from '@/components/admin/products/ProductsTable.vue'
+import ProductsTabs from '@/components/admin/products/ProductsTabs.vue'
+import ProductBulkImport from '@/views/admin/products/ProductBulkImport.vue'
+import { toast } from '@/composables/useToast'
+import { useProductsStore } from '@/stores/products'
+import { useLookupStore } from '@/stores/lookup.store'
+import { APPROVAL_META, PROD_STATUS_META, SYNC_META } from '@/data/productsMeta'
 
-const STATUS_META = {
-  active: {
-    label: "Active",
-    color: "var(--zg-good)",
-    bg: "oklch(0.78 0.15 150 / 0.1)",
-  },
-  draft: {
-    label: "Draft",
-    color: "oklch(0.82 0.14 215)",
-    bg: "oklch(0.82 0.14 215 / 0.1)",
-  },
-  pending_review: {
-    label: "Pending Review",
-    color: "var(--zg-warn)",
-    bg: "oklch(0.82 0.15 75 / 0.1)",
-  },
-  out_of_stock: {
-    label: "Out of Stock",
-    color: "var(--zg-danger)",
-    bg: "oklch(0.70 0.18 25 / 0.08)",
-  },
-  suspended: {
-    label: "Suspended",
-    color: "var(--zg-danger)",
-    bg: "oklch(0.70 0.18 25 / 0.15)",
-  },
-  archived: {
-    label: "Archived",
-    color: "var(--zg-text-dim)",
-    bg: "var(--zg-panel-hi)",
-  },
-  rejected: {
-    label: "Rejected",
-    color: "var(--zg-danger)",
-    bg: "oklch(0.70 0.18 25 / 0.1)",
-  },
-};
+const FALLBACK_STATUS_VALUES = ['active', 'pending_review', 'draft', 'rejected', 'out_of_stock', 'suspended', 'archived']
+const FALLBACK_MARKETS = ['AE', 'SA', 'EG', 'QA']
 
-const PRODUCTS = [
-  {
-    id: "PRD-10001",
-    name: "Levis Black Ripped Jeans",
-    brand: "Le Maillot",
-    vendor: "24K Fashion House",
-    sku: "JNS-LME-SC24-10001",
-    category: "Jeans",
-    status: "active",
-    approval: "approved",
-    markets: ["AE", "EG", "SA"],
-    inventory: 249,
-    variants: 10,
-    price: "799 EGP",
-    sync: "shopify",
-  },
-  {
-    id: "PRD-10002",
-    name: "Le Maillot Beige Swimsuit",
-    brand: "Le Maillot",
-    vendor: "24K Fashion House",
-    sku: "SWM-LME-SC24-10002",
-    category: "Swimwear",
-    status: "active",
-    approval: "approved",
-    markets: ["AE", "EG"],
-    inventory: 83,
-    variants: 5,
-    price: "450 EGP",
-    sync: "shopify",
-  },
-  {
-    id: "PRD-10003",
-    name: "Burgandy Evening Gown",
-    brand: "Burgandy",
-    vendor: "24K Fashion House",
-    sku: "EVN-BRG-FC24-10003",
-    category: "Evening Wear",
-    status: "draft",
-    approval: "pending",
-    markets: ["AE"],
-    inventory: 14,
-    variants: 3,
-    price: "1,200 AED",
-    sync: "shopify",
-  },
-  {
-    id: "PRD-10004",
-    name: "7 Wonders Linen Blazer",
-    brand: "7 Wonders",
-    vendor: "7 Wonders Trading",
-    sku: "FRM-7WW-SC25-10004",
-    category: "Formal",
-    status: "draft",
-    approval: "rejected",
-    markets: ["AE", "SA"],
-    inventory: 0,
-    variants: 4,
-    price: "280 USD",
-    sync: "manual",
-  },
-  {
-    id: "PRD-10005",
-    name: "Cairo Cotton Underwear Set",
-    brand: "Cairo Essentials",
-    vendor: "Cairo Brands Co.",
-    sku: "UND-CCE-SC24-10005",
-    category: "Underwear",
-    status: "active",
-    approval: "approved",
-    markets: ["EG"],
-    inventory: 412,
-    variants: 8,
-    price: "180 EGP",
-    sync: "api",
-  },
-  {
-    id: "PRD-10006",
-    name: "Almaz Silk Wrap Dress",
-    brand: "Almaz Couture",
-    vendor: "Almaz Couture LLC",
-    sku: "DRS-ALC-SC25-10006",
-    category: "Dresses",
-    status: "pending_review",
-    approval: "pending",
-    markets: ["AE", "SA", "EG"],
-    inventory: 28,
-    variants: 6,
-    price: "850 AED",
-    sync: "shopify",
-  },
-  {
-    id: "PRD-10007",
-    name: "Aurora Sports Bra Coral",
-    brand: "Aurora Fashion",
-    vendor: "Aurora Fashion SA",
-    sku: "ACT-AUR-SC25-10007",
-    category: "Activewear",
-    status: "out_of_stock",
-    approval: "approved",
-    markets: ["AE", "SA"],
-    inventory: 0,
-    variants: 5,
-    price: "220 SAR",
-    sync: "shopify",
-  },
-  {
-    id: "PRD-10008",
-    name: "Le Maillot Classic One-Piece",
-    brand: "Le Maillot",
-    vendor: "24K Fashion House",
-    sku: "SWM-LME-FC24-10008",
-    category: "Swimwear",
-    status: "active",
-    approval: "approved",
-    markets: ["AE", "SA"],
-    inventory: 64,
-    variants: 4,
-    price: "520 EGP",
-    sync: "shopify",
-  },
-  {
-    id: "PRD-10009",
-    name: "Burgandy Sequin Midi Dress",
-    brand: "Burgandy",
-    vendor: "24K Fashion House",
-    sku: "EVN-BRG-SC25-10009",
-    category: "Evening Wear",
-    status: "active",
-    approval: "approved",
-    markets: ["AE", "SA", "EG"],
-    inventory: 19,
-    variants: 3,
-    price: "1,400 AED",
-    sync: "shopify",
-  },
-  {
-    id: "PRD-10010",
-    name: "7 Wonders Tailored Blazer",
-    brand: "7 Wonders",
-    vendor: "7 Wonders Trading",
-    sku: "FRM-7WW-FC24-10010",
-    category: "Formal",
-    status: "active",
-    approval: "approved",
-    markets: ["AE"],
-    inventory: 37,
-    variants: 5,
-    price: "310 USD",
-    sync: "manual",
-  },
-  {
-    id: "PRD-10011",
-    name: "Cairo Essentials Linen Shirt",
-    brand: "Cairo Essentials",
-    vendor: "Cairo Brands Co.",
-    sku: "CSL-CCE-SC25-10011",
-    category: "Casual Wear",
-    status: "draft",
-    approval: "pending",
-    markets: ["EG"],
-    inventory: 150,
-    variants: 6,
-    price: "220 EGP",
-    sync: "api",
-  },
-  {
-    id: "PRD-10012",
-    name: "Aurora High Waist Leggings",
-    brand: "Aurora Fashion",
-    vendor: "Aurora Fashion SA",
-    sku: "ACT-AUR-FC24-10012",
-    category: "Activewear",
-    status: "active",
-    approval: "approved",
-    markets: ["AE", "SA"],
-    inventory: 89,
-    variants: 4,
-    price: "180 SAR",
-    sync: "shopify",
-  },
-];
+const router = useRouter()
+const store = useProductsStore()
+const lookupStore = useLookupStore()
 
-const statusTab = ref("all");
-const search = ref("");
+const statusTab = ref('all')
+const search = ref('')
 const filters = ref({
   vendor: 'all',
   brand: 'all',
   category: 'all',
   market: 'all',
   approval: 'all'
-});
-const STATUS_TABS = [
-  "all",
-  "active",
-  "pending_review",
-  "draft",
-  "rejected",
-  "out_of_stock",
-  "archived",
-];
+})
+const selectedIds = ref([])
+const bulkAction = ref('')
+const importOpen = ref(false)
 
-const filtered = computed(() => {
-  return PRODUCTS.filter((p) => {
-    const matchTab = statusTab.value === "all" || p.status === statusTab.value;
-    const matchSearch =
-      !search.value ||
-      p.name.toLowerCase().includes(search.value.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.value.toLowerCase()) ||
-      p.brand.toLowerCase().includes(search.value.toLowerCase());
+const normalizeStatusValue = (value) => String(value || '')
+  .trim()
+  .toLowerCase()
+  .replace(/[\s-]+/g, '_')
 
-    const matchVendor = filters.value.vendor === 'all' || p.vendor === filters.value.vendor;
-    const matchBrand = filters.value.brand === 'all' || p.brand === filters.value.brand;
-    const matchCategory = filters.value.category === 'all' || p.category === filters.value.category;
-    const matchMarket = filters.value.market === 'all' || (p.markets || []).includes(filters.value.market);
-    const matchApproval = filters.value.approval === 'all' || p.approval === filters.value.approval;
+const humanizeStatus = (value) => String(value || '')
+  .split('_')
+  .filter(Boolean)
+  .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+  .join(' ')
 
-    return matchTab && matchSearch && matchVendor && matchBrand && matchCategory && matchMarket && matchApproval;
-  });
-});
+const humanizeAction = (value) => humanizeStatus(String(value || '').replace(/[\s-]+/g, '_'))
+const getLookupStatusValue = (status) => normalizeStatusValue(
+  status?.code ??
+  status?.slug ??
+  status?.value ??
+  status?.id ??
+  status?.key ??
+  status?.title ??
+  status?.name ??
+  status?.label
+)
+const getLookupStatusLabel = (status, fallbackValue = '') =>
+  status?.label || status?.name || status?.title || humanizeStatus(fallbackValue)
 
-const tabCounts = computed(() => {
-  const c = {};
-  STATUS_TABS.forEach((t) => {
-    c[t] =
-      t === "all"
-        ? PRODUCTS.length
-        : PRODUCTS.filter((p) => p.status === t).length;
-  });
-  return c;
-});
+const statusLookupMap = computed(() => Object.fromEntries(
+  lifecycleStatuses.value.map(status => {
+    const value = getLookupStatusValue(status)
+    return [value, getLookupStatusLabel(status, value)]
+  })
+))
 
-const selectedIds = ref([]);
+const statusMeta = (status) => {
+  const normalizedStatus = normalizeStatusValue(status)
+  const fallback = PROD_STATUS_META[normalizedStatus] || PROD_STATUS_META.draft
+
+  return {
+    ...fallback,
+    label: statusLookupMap.value[normalizedStatus] || fallback.label
+  }
+}
+const syncMeta = (status) => SYNC_META[normalizeStatusValue(status)] || SYNC_META.manual
+
+const products = computed(() => store.items)
+const productsCount = computed(() => store.total || products.value.length)
+const lifecycleStatuses = computed(() => lookupStore.getStatus('product_lifecycle'))
+const approvalStatuses = computed(() => lookupStore.getStatus('product_approval'))
+const approvalLookupMap = computed(() => Object.fromEntries(
+  approvalStatuses.value.map(status => {
+    const value = getLookupStatusValue(status)
+    return [value, getLookupStatusLabel(status, value)]
+  })
+))
+const approvalMeta = (status) => {
+  const normalizedStatus = normalizeStatusValue(status)
+  const fallback = APPROVAL_META[normalizedStatus] || APPROVAL_META.pending
+
+  return {
+    ...fallback,
+    label: approvalLookupMap.value[normalizedStatus] || fallback.label
+  }
+}
+const marketLookupMap = computed(() => {
+  const entries = {}
+
+  lookupStore.get('markets').forEach((market) => {
+    const label = market.label || market.name || market.title || market.code || String(market.id || '')
+    ;[
+      market.id,
+      market.value,
+      market.code,
+      market.name
+    ].filter(value => value !== undefined && value !== null && value !== '')
+      .forEach((value) => {
+        entries[String(value)] = label
+      })
+  })
+
+  return entries
+})
+
+const resolveMarketLabel = (market) => marketLookupMap.value[String(market)] || String(market || '')
+
+const normalizedProducts = computed(() =>
+  products.value.map(product => ({
+    ...product,
+    markets: (product.markets || []).map(resolveMarketLabel).filter(Boolean)
+  }))
+)
+
+const markets = computed(() => {
+  const lookupMarkets = lookupStore.get('markets')
+  return lookupMarkets.length
+    ? lookupMarkets.map(market => market.label || market.name || market.title || market.code).filter(Boolean)
+    : FALLBACK_MARKETS
+})
+
+const statusTabs = computed(() => {
+  const seen = new Set()
+  const lookupTabs = lifecycleStatuses.value
+    .map(status => {
+      const value = getLookupStatusValue(status)
+      if (!value || seen.has(value)) return null
+      seen.add(value)
+      return {
+        value,
+        label: getLookupStatusLabel(status, value),
+        sortOrder: Number.isFinite(Number(status.sortOrder)) ? Number(status.sortOrder) : Number.MAX_SAFE_INTEGER
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label))
+
+  const fallbackTabs = FALLBACK_STATUS_VALUES.map(value => ({
+    value,
+    label: PROD_STATUS_META[value]?.label || humanizeStatus(value)
+  }))
+
+  return [{ value: 'all', label: 'All' }, ...(lookupTabs.length ? lookupTabs : fallbackTabs)]
+})
+
+const bulkActionOptions = computed(() =>
+  (approvalStatuses.value.length
+    ? approvalStatuses.value.map(status => {
+        const value = getLookupStatusValue(status)
+        if (!value) return null
+        return {
+          value,
+          label: getLookupStatusLabel(status, value),
+          sortOrder: Number.isFinite(Number(status.sortOrder)) ? Number(status.sortOrder) : Number.MAX_SAFE_INTEGER
+        }
+      })
+    : [...new Set(products.value.map(product => normalizeStatusValue(product.approvalStatus)).filter(Boolean))]
+      .map(value => ({
+        value,
+        label: approvalLookupMap.value[value] || APPROVAL_META[value]?.label || humanizeStatus(value),
+        sortOrder: Number.MAX_SAFE_INTEGER
+      })))
+    .map(status => {
+      if (!status) return null
+      if (typeof status === 'object' && 'value' in status) return status
+      const value = getLookupStatusValue(status)
+      if (!value) return null
+      return {
+        value,
+        label: getLookupStatusLabel(status, value),
+        sortOrder: Number.isFinite(Number(status.sortOrder)) ? Number(status.sortOrder) : Number.MAX_SAFE_INTEGER
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label))
+    .map(({ value, label }) => ({ value, label }))
+)
+
+const vendors = computed(() => [...new Set(products.value.map(product => product.vendor).filter(Boolean))])
+const brands = computed(() => [...new Set(products.value.map(product => product.brand).filter(Boolean))])
+const categories = computed(() => [...new Set(products.value.map(product => product.category).filter(Boolean))])
+
+const matchesStatusTab = (product, value) => {
+  if (value === 'all') return true
+  return normalizeStatusValue(product.status) === value || normalizeStatusValue(product.approvalStatus) === value
+}
+
+const filtered = computed(() =>
+  normalizedProducts.value.filter(product => {
+    const query = search.value.trim().toLowerCase()
+    const matchSearch = !query || [product.name, product.sku, product.vendor, product.brand]
+      .filter(Boolean)
+      .some(field => field.toLowerCase().includes(query))
+
+    return matchesStatusTab(product, statusTab.value) &&
+      matchSearch &&
+      (filters.value.vendor === 'all' || product.vendor === filters.value.vendor) &&
+      (filters.value.brand === 'all' || product.brand === filters.value.brand) &&
+      (filters.value.category === 'all' || product.category === filters.value.category) &&
+      (filters.value.market === 'all' || (product.markets || []).includes(filters.value.market)) &&
+      (filters.value.approval === 'all' || normalizeStatusValue(product.approvalStatus) === filters.value.approval)
+  })
+)
+
+const tabCounts = computed(() => Object.fromEntries(
+  statusTabs.value.map(tab => [
+    tab.value,
+    store.tabs[tab.value] ?? 0
+  ])
+))
+
 const toggleSelect = (id) => {
   selectedIds.value = selectedIds.value.includes(id)
-    ? selectedIds.value.filter((x) => x !== id)
-    : [...selectedIds.value, id];
-};
+    ? selectedIds.value.filter(currentId => currentId !== id)
+    : [...selectedIds.value, id]
+}
+
 const toggleAll = () => {
-  selectedIds.value =
-    selectedIds.value.length === filtered.value.length
-      ? []
-      : filtered.value.map((p) => p.id);
-};
+  selectedIds.value = selectedIds.value.length === filtered.value.length
+    ? []
+    : filtered.value.map(product => product.id)
+}
+
+const applyBulk = async () => {
+  if (!bulkAction.value || !selectedIds.value.length) return
+
+  try {
+    const { refreshError } = await store.bulkAction(bulkAction.value, selectedIds.value)
+    toast.success(`${humanizeAction(bulkAction.value)} applied to ${selectedIds.value.length} products`)
+    selectedIds.value = []
+    bulkAction.value = ''
+
+    if (refreshError) {
+      toast.warn('Bulk action succeeded, but the products list did not refresh')
+    }
+  } catch {
+    toast.error(store.error || 'Failed to apply product bulk action')
+  }
+}
+
+const openProduct = (id) => {
+  router.push(`/admin/products/${id}`)
+}
+
+const handleExport = async () => {
+  try {
+    await store.exportProducts()
+    toast.success('Exporting products CSV…')
+  } catch {
+    toast.error(store.error || 'Failed to export products CSV')
+  }
+}
+
+const onPageChange = (event) => {
+  const newPage = event.page + 1
+  selectedIds.value = []
+  store.load({ page: newPage, perPage: event.rows })
+}
+
+watch(statusTabs, (tabs) => {
+  if (!tabs.some(tab => tab.value === statusTab.value)) {
+    statusTab.value = 'all'
+  }
+})
+
+onMounted(async () => {
+  await Promise.allSettled([
+    store.load(),
+    lookupStore.load(),
+    lookupStore.loadStatusDomain('product_lifecycle'),
+    lookupStore.loadStatusDomain('product_approval')
+  ])
+})
 </script>
 
 <style scoped>

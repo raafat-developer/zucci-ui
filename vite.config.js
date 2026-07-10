@@ -13,5 +13,12 @@ export default defineConfig({
   server: {
     port: 5173,
     open: true,
+    proxy: {
+      '/api/v1': {
+        target: 'https://api.zucci.xyz',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
   },
 });

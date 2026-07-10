@@ -67,5 +67,13 @@ defineProps({
 }
 .zbtn--quiet:hover { color: var(--zg-text); }
 
+.zbtn--danger {
+  background: oklch(0.65 0.25 20);
+  color: #fff;
+  border-color: oklch(0.65 0.25 20);
+}
+.zbtn--danger:hover { background: oklch(0.60 0.25 20); }
+.zbtn--danger:disabled { opacity: 0.4; cursor: not-allowed; }
+
 .zbtn--full { width: 100%; }
 </style>

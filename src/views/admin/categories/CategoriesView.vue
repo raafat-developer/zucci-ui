@@ -7,26 +7,64 @@
  * commission, expand children). Category drawer + bulk import wired.
  * `?type=products|marketplace` selects the panel.
  */
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
+import { storeToRefs } from 'pinia';
+import { useCategoriesStore } from '@/stores/categories';
+import { useLookupStore } from '@/stores/lookup.store';
 import { ZC_CATEGORIES, ZC_MARKETPLACE_CATS } from '@/data/categoriesData';
+import { useLookup } from '@/composables/useLookup';
 import CategoryDrawer from './CategoryDrawer.vue';
 import CategoryBulkImport from './CategoryBulkImport.vue';
 import { toast } from '@/composables/useToast';
+import { useConfirm } from '@/composables/useConfirm';
 
-const MKTS = ['AE','SA','EG','KW','BH','QA','OM'];
+const lookup = useLookup();
+const { confirm } = useConfirm();
+const FALLBACK_MARKETS = [
+  { id: 1, code: 'AE', name: 'UAE' },
+  { id: 2, code: 'SA', name: 'Saudi Arabia' },
+  { id: 3, code: 'EG', name: 'Egypt' },
+  { id: 4, code: 'KW', name: 'Kuwait' },
+  { id: 5, code: 'BH', name: 'Bahrain' },
+  { id: 6, code: 'QA', name: 'Qatar' },
+  { id: 7, code: 'OM', name: 'Oman' },
+];
+const MARKETS = computed(() => {
+  const markets = lookup.get('markets');
+  if (markets.length === 0) return FALLBACK_MARKETS;
+  return markets; 
+});
 const route = useRoute();
 const isMarketplace = computed(() => route.query.type === 'marketplace');
+const lookupStore = useLookupStore();
+
+// ── Store Integration ──
+const categoriesStore = useCategoriesStore();
+const {
+  internalCategories: prodCats,
+  marketplaceCategories: mktCats,
+  loading,
+  error,
+  page,
+  perPage,
+  total,
+  lastPage,
+  kpis: storeKpis
+} = storeToRefs(categoriesStore);
+
+onMounted(() => {
+  categoriesStore.load();
+  lookupStore.loadStatusDomain('category');
+});
 
 // ── helpers ──
 const belowMin = (cat, m) => { const ms = cat.markets?.[m]; return ms?.enabled && ms.listing_count < ms.min_listings; };
-const anyBelowMin = (cat) => MKTS.some((m) => belowMin(cat, m));
-const belowMinCount = (list) => list.reduce((s, c) => s + MKTS.filter((m) => belowMin(c, m)).length, 0);
+const anyBelowMin = (cat) => MARKETS.value.some((market) => belowMin(cat, market.code));
+const belowMinCount = (list) => list.reduce((s, c) => s + MARKETS.value.filter((market) => belowMin(c, market.code)).length, 0);
 const clone = (arr) => arr.map((c) => ({ ...c, children: (c.children || []).map((ch) => ({ ...ch })) }));
 
 // ── state ──
-const prodCats = ref(clone(ZC_CATEGORIES));
-const mktCats = ref(clone(ZC_MARKETPLACE_CATS));
 const expanded = ref({});
 const statsFor = ref(null);
 const mktFilter = ref('all');
@@ -49,7 +87,7 @@ const INTL = ZC_CATEGORIES || [];
 const toggle = (id) => { expanded.value = { ...expanded.value, [id]: !expanded.value[id] }; };
 const openAdd = (par = null) => { editCat.value = null; parentCat.value = par; drawerOpen.value = true; };
 const openEdit = (c) => { editCat.value = { ...c }; parentCat.value = null; drawerOpen.value = true; };
-const openAddMkt = () => { editCat.value = { commission_pct:'', listing_requirements:[], requires_approval:false, markets:Object.fromEntries(MKTS.map((m) => [m, { enabled:false, min_listings:10, commission_pct:15 }])) }; parentCat.value = null; drawerOpen.value = true; };
+const openAddMkt = () => { editCat.value = { commission_pct:'', listing_requirements:[], requires_approval:false, markets:Object.fromEntries(MARKETS.value.map((m) => [m.code, { enabled:false, min_listings:10, commission_pct:15 }])) }; parentCat.value = null; drawerOpen.value = true; };
 const toggleStatus = (id, isChild, pid) => {
   prodCats.value = prodCats.value.map((c) => {
     if (!isChild && c.id === id) return { ...c, status: c.status === 'active' ? 'inactive' : 'active' };
@@ -57,7 +95,23 @@ const toggleStatus = (id, isChild, pid) => {
     return c;
   });
 };
-const del = (cat) => { if (confirm(`Delete "${cat.label}"?`)) { prodCats.value = prodCats.value.filter((c) => c.id !== cat.id); toast.warn(`"${cat.label}" deleted`); } };
+const del = async (cat) => { 
+  const confirmed = await confirm({ 
+    title: 'Delete Category',
+    message: `Are you sure you want to delete "${cat.label}"? This action cannot be undone.`,
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    variant: 'danger'
+  });
+  if (confirmed) {
+    try {
+      await categoriesStore.deleteCategory(cat.id);
+      toast.warn(`"${cat.label}" deleted`); 
+    } catch (err) {
+      toast.error(err.message);
+    }
+  }
+};
 const downloadCsv = () => toast.success('Exporting categories CSV…');
 
 const tagStyle = (cat, m) => {
@@ -68,24 +122,31 @@ const tagStyle = (cat, m) => {
   return { enabled:true, below, opacity: dim ? 0.35 : 1 };
 };
 
-// KPIs
+// Pagination handler
+const totalPages = computed(() => lastPage.value);
+const onPageChange = (event) => {
+  const newPage = event.page + 1;
+  categoriesStore.load({ page: newPage });
+};
+
+// KPIs from store
 const kpis = computed(() => {
-  const list = isMarketplace.value ? mktCats.value : prodCats.value;
+  const sk = storeKpis.value;
   if (isMarketplace.value) return [
-    ['Marketplace Cats', list.length, '', 'vendor-facing'],
-    ['Mapped', list.filter((c) => c.mapped_to).length, 'is-good', 'linked to internal'],
-    ['Approval Required', list.filter((c) => c.requires_approval).length, 'is-warn', 'need review'],
-    ['Avg Commission', Math.round(list.reduce((s, c) => s + (c.commission_pct || 0), 0) / Math.max(1, list.length)) + '%', 'is-accent', 'across categories'],
-    ['Total Listings', list.reduce((s, c) => s + (c.listing_count || 0), 0).toLocaleString(), '', 'active'],
-    ['Below Min', belowMinCount(list), belowMinCount(list) > 0 ? 'is-warn' : '', 'market thresholds'],
+    ['Marketplace Cats', sk?.total || 0, '', 'vendor-facing'],
+    ['Mapped', sk?.topLevel || 0, 'is-good', 'linked to internal'],
+    ['Approval Required', sk?.subCategories || 0, 'is-warn', 'need review'],
+    ['Avg Commission', '15%', 'is-accent', 'across categories'],
+    ['Total Listings', (sk?.totalProducts || 0).toLocaleString(), '', 'active'],
+    ['Below Min', sk?.thresholdWarnings || 0, (sk?.thresholdWarnings || 0) > 0 ? 'is-warn' : '', 'market thresholds'],
   ];
   return [
-    ['Total Categories', list.length + list.reduce((s, c) => s + (c.children?.length || 0), 0), '', 'all levels'],
-    ['Top-level', list.length, '', 'parent categories'],
-    ['Active', list.filter((c) => c.status === 'active').length, 'is-good', 'live on storefront'],
-    ['Private', list.filter((c) => c.private).length, 'is-accent', 'B2B / VIP / hidden'],
-    ['Total Products', list.reduce((s, c) => s + (c.product_count || 0), 0).toLocaleString(), '', 'across all'],
-    ['Below Min', belowMinCount(list), belowMinCount(list) > 0 ? 'is-warn' : '', 'market thresholds'],
+    ['Total Categories', sk?.taxonomyTrees || 0, '', 'all levels'],
+    ['Top-level', sk?.topLevel || 0, '', 'parent categories'],
+    ['Active', sk?.activeStorefront || 0, 'is-good', 'live on storefront'],
+    ['Private', sk?.privateB2bTiers || 0, 'is-accent', 'B2B / VIP / hidden'],
+    ['Total Products', (sk?.totalCatalogItems || 0).toLocaleString(), '', 'across all'],
+    ['Below Min', sk?.thresholdWarnings || 0, (sk?.thresholdWarnings || 0) > 0 ? 'is-warn' : '', 'market thresholds'],
   ];
 });
 const statsCat = computed(() => {
@@ -93,7 +154,7 @@ const statsCat = computed(() => {
   for (const c of cats.value) { if (c.id === statsFor.value) return c; const ch = (c.children || []).find((x) => x.id === statsFor.value); if (ch) return ch; }
   return null;
 });
-const mkts = MKTS;
+const mkts = MARKETS.value.map(m => m.code); // for backwards compatibility
 </script>
 
 <template>
@@ -117,7 +178,7 @@ const mkts = MKTS;
       <!-- Toolbar -->
       <div style="display:flex;gap:6px;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px">
         <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
-          <button v-for="m in ['all', ...mkts]" :key="m" class="zwh-filter-chip" :class="{ 'is-active': mktFilter === m }" @click="mktFilter = m">{{ m === 'all' ? 'All Markets' : m }}</button>
+          <button v-for="m in ['all', ...MARKETS.map(m => m.code)]" :key="m" class="zwh-filter-chip" :class="{ 'is-active': mktFilter === m }" @click="mktFilter = m">{{ m === 'all' ? 'All Markets' : m }}</button>
           <span v-if="belowMinCount(cats) > 0" style="height:20px;padding:0 8px;background:oklch(0.70 0.18 25 / 0.1);border:1px solid oklch(0.70 0.18 25 / 0.3);border-radius:3px;font-size:10px;font-weight:700;color:var(--zg-danger);display:inline-flex;align-items:center">{{ belowMinCount(cats) }} below minimum</span>
         </div>
         <div style="display:flex;gap:6px">
@@ -139,7 +200,7 @@ const mkts = MKTS;
             <span v-if="cat.private" class="zcat-badge private">Private</span>
             <div style="flex:1;min-width:0">
               <div style="display:flex;gap:3px;flex-wrap:wrap;align-items:center">
-                <span v-for="m in mkts" :key="m" v-show="cat.markets?.[m]" :style="{ height:'16px', padding:'0 5px', borderRadius:'2px', fontSize:'9px', fontWeight: tagStyle(cat, m)?.enabled ? 700 : 600, fontFamily:'var(--zg-mono)', background: !tagStyle(cat, m)?.enabled ? 'var(--zg-panel-hi)' : tagStyle(cat, m)?.below ? 'oklch(0.70 0.18 25 / 0.12)' : 'var(--zg-accent-tint)', color: !tagStyle(cat, m)?.enabled ? 'var(--zg-text-xdim)' : tagStyle(cat, m)?.below ? 'var(--zg-danger)' : 'var(--zg-accent)', border: `1px solid ${!tagStyle(cat, m)?.enabled ? 'var(--zg-line)' : tagStyle(cat, m)?.below ? 'oklch(0.70 0.18 25 / 0.3)' : 'oklch(0.78 0.18 130 / 0.3)'}`, opacity: tagStyle(cat, m)?.opacity, display:'inline-flex', alignItems:'center', gap:'2px' }">{{ m }}<span v-if="tagStyle(cat, m)?.below" style="font-size:8px;font-weight:900">!</span></span>
+                <span v-for="market in MARKETS" :key="market.code" :style="{ height:'16px', padding:'0 5px', borderRadius:'2px', fontSize:'9px', fontWeight: tagStyle(cat, market.code)?.enabled ? 700 : 600, fontFamily:'var(--zg-mono)', background: !tagStyle(cat, market.code)?.enabled ? 'var(--zg-panel-hi)' : tagStyle(cat, market.code)?.below ? 'oklch(0.70 0.18 25 / 0.12)' : 'oklch(0.78 0.18 130 / 0.3)', color: !tagStyle(cat, market.code)?.enabled ? 'var(--zg-text-xdim)' : tagStyle(cat, market.code)?.below ? 'var(--zg-danger)' : (cat.markets?.[market.code]?.enabled ? 'var(--zg-good)' : 'var(--zg-accent)'), border: `1px solid ${!tagStyle(cat, market.code)?.enabled ? 'var(--zg-line)' : tagStyle(cat, market.code)?.below ? 'oklch(0.70 0.18 25 / 0.3)' : (cat.markets?.[market.code]?.enabled ? 'var(--zg-good)' : 'oklch(0.78 0.18 130 / 0.3)')}`, opacity: tagStyle(cat, market.code)?.opacity, display:'inline-flex', alignItems:'center', gap:'2px' }">{{ market.code }}<span v-if="tagStyle(cat, market.code)?.below" style="font-size:8px;font-weight:900">!</span></span>
               </div>
             </div>
             <span class="zcat-count">{{ (cat.product_count || 0).toLocaleString() }} products</span>
@@ -154,12 +215,12 @@ const mkts = MKTS;
 
           <div v-if="statsFor === cat.id" style="padding:10px 14px 14px;background:var(--zg-bg);border-bottom:1px solid var(--zg-line)">
             <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">
-              <div v-for="m in mkts" :key="m" v-show="cat.markets?.[m]" :style="{ background:'var(--zg-panel)', border:`1px solid ${belowMin(cat, m) ? 'oklch(0.70 0.18 25 / 0.4)' : cat.markets?.[m]?.enabled ? 'var(--zg-line)' : 'var(--zg-line-soft)'}`, borderRadius:'var(--zg-radius-md)', padding:'8px 10px', opacity: cat.markets?.[m]?.enabled ? 1 : 0.45 }">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><span style="font-size:10px;font-weight:700;font-family:var(--zg-mono)">{{ m }}</span><span :style="{ width:'6px', height:'6px', borderRadius:'50%', background: cat.markets?.[m]?.enabled ? (belowMin(cat, m) ? 'var(--zg-danger)' : 'var(--zg-good)') : 'var(--zg-line)' }" /></div>
-                <template v-if="cat.markets?.[m]?.enabled">
-                  <div :style="{ fontSize:'13px', fontWeight:700, fontFamily:'var(--zg-mono)', color: belowMin(cat, m) ? 'var(--zg-danger)' : 'var(--zg-text)' }">{{ cat.markets[m].listing_count }}</div>
-                  <div style="font-size:9.5px;color:var(--zg-text-dim);margin-top:1px">/ {{ cat.markets[m].min_listings }} min</div>
-                  <div v-if="cat.markets[m].vendor_count" style="font-size:9px;color:var(--zg-text-xdim);margin-top:3px">{{ cat.markets[m].vendor_count }} vendors</div>
+              <div v-for="market in MARKETS" :key="market.code" v-show="cat.markets?.[market.code]" :style="{ background:'var(--zg-panel)', border:`1px solid ${belowMin(cat, market.code) ? 'oklch(0.70 0.18 25 / 0.4)' : cat.markets?.[market.code]?.enabled ? 'var(--zg-line)' : 'var(--zg-line-soft)'}`, borderRadius:'var(--zg-radius-md)', padding:'8px 10px', opacity: cat.markets?.[market.code]?.enabled ? 1 : 0.45 }">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><span style="font-size:10px;font-weight:700;font-family:var(--zg-mono)">{{ market.code }}</span><span :style="{ width:'6px', height:'6px', borderRadius:'50%', background: cat.markets?.[market.code]?.enabled ? (belowMin(cat, market.code) ? 'var(--zg-danger)' : 'var(--zg-good)') : 'var(--zg-line)' }" /></div>
+                <template v-if="cat.markets?.[market.code]?.enabled">
+                  <div :style="{ fontSize:'13px', fontWeight:700, fontFamily:'var(--zg-mono)', color: belowMin(cat, market.code) ? 'var(--zg-danger)' : 'var(--zg-text)' }">{{ cat.markets[market.code].listing_count }}</div>
+                  <div style="font-size:9.5px;color:var(--zg-text-dim);margin-top:1px">/ {{ cat.markets[market.code].min_listings }} min</div>
+                  <div v-if="cat.markets[market.code].vendor_count" style="font-size:9px;color:var(--zg-text-xdim);margin-top:3px">{{ cat.markets[market.code].vendor_count }} vendors</div>
                 </template>
                 <div v-else style="font-size:10px;color:var(--zg-text-xdim);margin-top:4px">Disabled</div>
               </div>
@@ -172,7 +233,7 @@ const mkts = MKTS;
               <span class="zcat-child-name">{{ ch.label }}</span>
               <span v-if="anyBelowMin(ch)" style="width:14px;height:14px;border-radius:50%;background:var(--zg-danger);color:#fff;font-size:9px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span>
               <div style="flex:1;min-width:0"><div style="display:flex;gap:3px;flex-wrap:wrap">
-                <span v-for="m in mkts" :key="m" v-show="ch.markets?.[m]?.enabled" style="height:15px;padding:0 4px;border-radius:2px;font-size:8.5px;font-weight:700;font-family:var(--zg-mono)" :style="{ background: belowMin(ch, m) ? 'oklch(0.70 0.18 25 / 0.12)' : 'var(--zg-accent-tint)', color: belowMin(ch, m) ? 'var(--zg-danger)' : 'var(--zg-accent)' }">{{ m }}</span>
+                <span v-for="market in MARKETS" :key="market.code" v-show="ch.markets?.[market.code]?.enabled" style="height:15px;padding:0 4px;border-radius:2px;font-size:8.5px;font-weight:700;font-family:var(--zg-mono)" :style="{ background: belowMin(ch, market.code) ? 'oklch(0.70 0.18 25 / 0.12)' : 'var(--zg-accent-tint)', color: belowMin(ch, market.code) ? 'var(--zg-danger)' : (ch.markets?.[market.code]?.enabled ? 'var(--zg-good)' : 'var(--zg-accent)') }">{{ market.code }}</span>
               </div></div>
               <span class="zcat-count">{{ (ch.product_count || 0).toLocaleString() }}</span>
               <button class="zcat-toggle" :class="ch.status === 'active' ? 'on' : 'off'" @click="toggleStatus(ch.id, true, cat.id)"><div class="zcat-toggle-knob" /></button>
@@ -200,7 +261,7 @@ const mkts = MKTS;
             <span style="font-family:var(--zg-mono);font-size:13px;font-weight:700;color:var(--zg-accent)">{{ mktFilter !== 'all' && cat.markets?.[mktFilter] ? cat.markets[mktFilter].commission_pct : cat.commission_pct }}%</span>
             <span style="font-family:var(--zg-mono);font-size:12px;color:var(--zg-text-mid)">{{ mktFilter !== 'all' && cat.markets?.[mktFilter] ? cat.markets[mktFilter].vendor_count : cat.vendor_count }}</span>
             <span style="font-family:var(--zg-mono);font-size:12px;color:var(--zg-text-mid)">{{ (mktFilter !== 'all' && cat.markets?.[mktFilter] ? cat.markets[mktFilter].listing_count : cat.listing_count)?.toLocaleString() }}</span>
-            <div style="display:flex;gap:3px;flex-wrap:wrap"><span v-for="m in mkts" :key="m" v-show="cat.markets?.[m]?.enabled" style="height:15px;padding:0 4px;border-radius:2px;font-size:8.5px;font-weight:700;font-family:var(--zg-mono)" :style="{ background: belowMin(cat, m) ? 'oklch(0.70 0.18 25 / 0.12)' : 'var(--zg-accent-tint)', color: belowMin(cat, m) ? 'var(--zg-danger)' : 'var(--zg-accent)' }">{{ m }}</span></div>
+            <div style="display:flex;gap:3px;flex-wrap:wrap"><span v-for="market in MARKETS" :key="market.code" v-show="cat.markets?.[market.code]?.enabled" style="height:15px;padding:0 4px;border-radius:2px;font-size:8.5px;font-weight:700;font-family:var(--zg-mono)" :style="{ background: belowMin(cat, market.code) ? 'oklch(0.70 0.18 25 / 0.12)' : 'var(--zg-accent-tint)', color: belowMin(cat, market.code) ? 'var(--zg-danger)' : (cat.markets?.[market.code]?.enabled ? 'var(--zg-good)' : 'var(--zg-accent)') }">{{ market.code }}</span></div>
             <div style="display:flex;gap:4px" @click.stop>
               <button class="zcat-act" style="opacity:1" @click="statsFor = statsFor === cat.id ? null : cat.id">Stats</button>
               <button class="zcat-act" style="opacity:1" @click="openEdit(cat)">Edit</button>
@@ -208,12 +269,12 @@ const mkts = MKTS;
           </div>
           <div v-if="statsFor === cat.id" style="padding:10px 14px 14px;background:var(--zg-bg);border-bottom:1px solid var(--zg-line)">
             <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">
-              <div v-for="m in mkts" :key="m" v-show="cat.markets?.[m]" :style="{ background:'var(--zg-panel)', border:`1px solid ${belowMin(cat, m) ? 'oklch(0.70 0.18 25 / 0.4)' : cat.markets?.[m]?.enabled ? 'var(--zg-line)' : 'var(--zg-line-soft)'}`, borderRadius:'var(--zg-radius-md)', padding:'8px 10px', opacity: cat.markets?.[m]?.enabled ? 1 : 0.45 }">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><span style="font-size:10px;font-weight:700;font-family:var(--zg-mono)">{{ m }}</span></div>
-                <template v-if="cat.markets?.[m]?.enabled">
-                  <div :style="{ fontSize:'13px', fontWeight:700, fontFamily:'var(--zg-mono)', color: belowMin(cat, m) ? 'var(--zg-danger)' : 'var(--zg-text)' }">{{ cat.markets[m].listing_count }}</div>
-                  <div style="font-size:9.5px;color:var(--zg-text-dim);margin-top:1px">/ {{ cat.markets[m].min_listings }} min</div>
-                  <div style="font-size:9.5px;color:var(--zg-accent);font-weight:700;margin-top:2px">{{ cat.markets[m].commission_pct }}% comm.</div>
+              <div v-for="market in MARKETS" :key="market.code" v-show="cat.markets?.[market.code]" :style="{ background:'var(--zg-panel)', border:`1px solid ${belowMin(cat, market.code) ? 'oklch(0.70 0.18 25 / 0.4)' : cat.markets?.[market.code]?.enabled ? 'var(--zg-line)' : 'var(--zg-line-soft)'}`, borderRadius:'var(--zg-radius-md)', padding:'8px 10px', opacity: cat.markets?.[market.code]?.enabled ? 1 : 0.45 }">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><span style="font-size:10px;font-weight:700;font-family:var(--zg-mono)">{{ market.code }}</span></div>
+                <template v-if="cat.markets?.[market.code]?.enabled">
+                  <div :style="{ fontSize:'13px', fontWeight:700, fontFamily:'var(--zg-mono)', color: belowMin(cat, market.code) ? 'var(--zg-danger)' : 'var(--zg-text)' }">{{ cat.markets[market.code].listing_count }}</div>
+                  <div style="font-size:9.5px;color:var(--zg-text-dim);margin-top:1px">/ {{ cat.markets[market.code].min_listings }} min</div>
+                  <div style="font-size:9.5px;color:var(--zg-accent);font-weight:700;margin-top:2px">{{ cat.markets[market.code].commission_pct }}% comm.</div>
                 </template>
                 <div v-else style="font-size:10px;color:var(--zg-text-xdim);margin-top:4px">Disabled</div>
               </div>
@@ -232,6 +293,22 @@ const mkts = MKTS;
           </template>
         </template>
       </div>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 16px; border-top: 1px solid var(--zg-line); background: var(--zg-panel); margin-top: 16px;">
+      <Paginator 
+        :rows="perPage" 
+        :totalRecords="total" 
+        :first="(page - 1) * perPage" 
+        @page="onPageChange"
+      />
+      <span v-if="loading" style="font-family: var(--zg-mono); font-size: 12px; color: var(--zg-text-xdim); margin-left: 16px;">
+        Loading...
+      </span>
+      <span v-if="error" style="font-family: var(--zg-mono); font-size: 12px; color: var(--zg-danger); margin-left: 16px;">
+        {{ error }}
+      </span>
     </div>
 
     <CategoryDrawer :open="drawerOpen" :cat="editCat" :parent-cat="parentCat" :is-marketplace="isMarketplace" @close="drawerOpen = false" @save="() => {}" />

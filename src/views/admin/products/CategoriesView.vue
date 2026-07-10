@@ -365,6 +365,22 @@
 
     </div>
 
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 16px; border-top: 1px solid var(--zg-line); background: var(--zg-panel);">
+      <Paginator 
+        :rows="perPage" 
+        :totalRecords="total" 
+        :first="(page - 1) * perPage" 
+        @page="onPageChange"
+      />
+      <span v-if="loading" style="font-family: var(--zg-mono); font-size: 12px; color: var(--zg-text-xdim); margin-left: 16px;">
+        Loading...
+      </span>
+      <span v-if="error" style="font-family: var(--zg-mono); font-size: 12px; color: var(--zg-danger); margin-left: 16px;">
+        {{ error }}
+      </span>
+    </div>
+
     <!-- ── TELEPORT OVERLAY: ADD / EDIT CATEGORY DRAWER ── -->
     <Teleport to="body">
       <div v-if="drawerOpen" class="drawer-overlay" @click.self="drawerOpen = false" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; justify-content: flex-end;">
@@ -599,12 +615,26 @@
 <script setup>
 
 import { storeToRefs } from 'pinia'
-const { internalCategories, marketplaceCategories } = storeToRefs(useCategoriesStore())
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useCategoriesStore } from '../../../stores/categories'
+
+const categoriesStore = useCategoriesStore()
+const { internalCategories, marketplaceCategories, loading, error, page, perPage, total, lastPage, kpis } = storeToRefs(categoriesStore)
 
 const MARKETS = ['AE', 'SA', 'EG', 'KW', 'BH', 'QA', 'OM']
 
+// Load data on mount
+onMounted(() => {
+  categoriesStore.load()
+})
+
+// Pagination
+const totalPages = computed(() => lastPage.value)
+
+const onPageChange = (event) => {
+  const newPage = event.page + 1
+  categoriesStore.load({ page: newPage })
+}
 
 
 
@@ -662,40 +692,14 @@ const currentCategories = computed(() => {
   }
 })
 
-const belowMinTotalCount = computed(() => {
-  const cats = activeView.value === 'products' ? internalCategories.value : marketplaceCategories.value
-  let count = 0
-  cats.forEach(c => {
-    MARKETS.forEach(m => {
-      const ms = c.markets?.[m]
-      if (ms?.enabled && ms.listing_count < ms.min_listings) {
-        count++
-      }
-    })
-  })
-  return count
-})
 
-// KPI Metrics
-const totalCategoriesCount = computed(() => {
-  let count = internalCategories.value.length
-  internalCategories.value.forEach(c => {
-    if (c.children) count += c.children.length
-  })
-  return count
-})
 
-const activeCategoriesCount = computed(() => {
-  return internalCategories.value.filter(c => c.status === 'active').length
-})
-
-const privateCategoriesCount = computed(() => {
-  return internalCategories.value.filter(c => c.private).length
-})
-
-const totalProductsCount = computed(() => {
-  return internalCategories.value.reduce((s, c) => s + (c.product_count || 0), 0)
-})
+// KPI Metrics from store
+const totalCategoriesCount = computed(() => kpis.value.taxonomyTrees || 0)
+const activeCategoriesCount = computed(() => kpis.value.activeStorefront || 0)
+const privateCategoriesCount = computed(() => kpis.value.privateB2bTiers || 0)
+const totalProductsCount = computed(() => kpis.value.totalCatalogItems || 0)
+const belowMinTotalCount = computed(() => kpis.value.thresholdWarnings || 0)
 
 // ── Helpers ───────────────────────────────────────────────
 const isBelowMin = (cat, mkt) => {

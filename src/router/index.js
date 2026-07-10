@@ -37,7 +37,7 @@ const routes = [
       // generic list modules (config-driven)
       { path: 'orders',     name: 'orders',     component: () => import('@/views/admin/orders/OrdersView.vue'), meta: { title: 'Orders' } },
       // Products — full faithful module (list + new + detail)
-      { path: 'products',      name: 'products',        component: () => import('@/views/admin/products/ProductsListView.vue'), meta: { title: 'Products' } },
+      { path: 'products',      name: 'products',        component: () => import('@/views/admin/products/index.vue'), meta: { title: 'Products' } },
       { path: 'products/new',  name: 'product-new',      component: () => import('@/views/admin/products/ProductDetailView.vue'), meta: { title: 'New Product' } },
       { path: 'products/size-charts', name: 'admin-products-size-charts', component: () => import('@/views/admin/products/SizeChartsView.vue'), meta: { title: 'Size Charts' } },
       { path: 'products/fit-finder', name: 'admin-products-fit-finder', component: () => import('@/views/admin/products/FitFinderView.vue'), meta: { title: 'Size Picker / Fit Finder' } },

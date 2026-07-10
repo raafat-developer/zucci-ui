@@ -22,12 +22,27 @@ export const useAuthStore = defineStore('auth', {
     async login({ email, password, remember = true }) {
       this.loading = true; this.error = null;
       try {
-        const { data } = await http.post('/auth/login', { email, password });
-        this.token = data.token;
-        this.user = data.user;
-        tokenStore.set(data.token, remember);
-        tokenStore.setUser(data.user);
-        return data.user;
+        const res = await http.post('/auth/admin/login', { email, password });
+        // Map the real API response to our internal user shape.
+        const actor = res.actor || {};
+        const user = {
+          id: actor.id,
+          email: actor.email,
+          firstName: actor.first_name,
+          lastName: actor.last_name,
+          role: actor.type,                                    // 'admin' | 'supplier'
+          roleLabel: res.roles?.[0]?.name || actor.type,       // 'Super Admin'
+          roles: res.roles || [],
+          permissions: res.permissions || [],
+          markets: res.markets || [],
+          brands: res.brands || [],
+          initials: `${(actor.first_name || '')[0] || ''}${(actor.last_name || '')[0] || ''}`.toUpperCase(),
+        };
+        this.token = res.token;
+        this.user = user;
+        tokenStore.set(res.token, remember);
+        tokenStore.setUser(user);
+        return user;
       } catch (e) {
         this.error = e.message || 'Login failed';
         throw e;

@@ -1,16 +1,26 @@
 <script setup>
 /**
  * SignInPassword — step 02. Password entry with show/hide + forgot link.
- * Emits `next`, `back`, `forgot`.
+ * Emits `next` with the password, `back`, `forgot`.
  */
 import { ref } from 'vue';
+import { useAuthStore } from '@/stores/auth';
 import ZButton from '@/components/ui/ZButton.vue';
 import ZInput from '@/components/ui/ZInput.vue';
 import ZStepMarker from '@/components/ui/ZStepMarker.vue';
 
-defineEmits(['next', 'back', 'forgot']);
+const props = defineProps({
+  email: { type: String, default: '' },
+});
+
+const emit = defineEmits(['next', 'back', 'forgot']);
+const auth = useAuthStore();
 const pw = ref('');
 const show = ref(false);
+
+function onNext() {
+  emit('next', { password: pw.value });
+}
 </script>
 
 <template>
@@ -18,8 +28,11 @@ const show = ref(false);
 
   <div>
     <h1 class="zauth-title">Enter your password</h1>
-    <p class="zauth-sub">Signing in as <b>layla.haddad@zucci.com</b></p>
+    <p class="zauth-sub">Signing in as <b>{{ props.email || '—' }}</b></p>
   </div>
+
+  <!-- Error banner -->
+  <div v-if="auth.error" class="zauth-error">{{ auth.error }}</div>
 
   <div class="zauth-fields">
     <div class="zauth-field">
@@ -37,7 +50,9 @@ const show = ref(false);
 
   <div class="zauth-btn-row">
     <ZButton variant="ghost" @click="$emit('back')">Back</ZButton>
-    <ZButton variant="primary" full @click="$emit('next')">Continue →</ZButton>
+    <ZButton variant="primary" full :disabled="auth.loading" @click="onNext">
+      {{ auth.loading ? 'Signing in…' : 'Continue →' }}
+    </ZButton>
   </div>
 </template>
 
@@ -48,4 +63,13 @@ const show = ref(false);
   color: var(--zg-text-dim); font-size: 11px; font-family: inherit;
 }
 .pw-toggle:hover { color: var(--zg-text); }
+.zauth-error {
+  background: rgba(255, 70, 70, 0.12);
+  border: 1px solid rgba(255, 70, 70, 0.3);
+  border-radius: 8px;
+  color: #ff6b6b;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  margin-bottom: 4px;
+}
 </style>

@@ -15,6 +15,7 @@
 //   PATCH  /<resource>/:id        → updated row
 //   DELETE /<resource>/:id        → { ok: true }
 
+import axios from 'axios';
 import { ZCP_PRODUCTS, ZCP_DETAIL_10001 } from '@/data/productsData';
 import { ZC_ORDERS_LIST, ZC_ORDER_DETAIL } from '@/data/ordersData';
 import { ZCW_WAREHOUSES, ZCW_ALERTS, ZCW_INVENTORY, ZCW_TRANSFERS, ZCW_RETURNS } from '@/data/warehouseData';
@@ -122,6 +123,8 @@ function resolve(method, path, body, query) {
 }
 
 // Axios adapter signature: (config) => Promise<AxiosResponse>
+const networkAdapter = axios.getAdapter(axios.defaults.adapter);
+
 export function mockAdapter(config) {
   const method = (config.method || 'get').toLowerCase();
   const path = String(config.url || '').replace(/^\/+/, '').replace(/\?.*$/, '');
@@ -136,6 +139,13 @@ export function mockAdapter(config) {
         const data = resolve(method, path, body, query);
         resolve_({ data: { data }, status: 200, statusText: 'OK', headers: {}, config });
       } catch (e) {
+        // If the mock layer does not know this endpoint, let the real HTTP
+        // adapter send it to the backend instead of failing locally.
+        if (e.status === 404 && networkAdapter) {
+          networkAdapter(config).then(resolve_).catch(reject);
+          return;
+        }
+
         const status = e.status || 500;
         reject({ response: { status, data: { message: e.message } }, config, message: e.message });
       }
