@@ -28,7 +28,8 @@
             </button>
          </div>
       </div>
-      <div class="zp-detail-actions"><button type="button" class="zen-btn-ghost" style="height: 28px; font-size: 11px;">Preview</button><button type="button" class="zen-btn-ghost" style="height: 28px; font-size: 11px;">Submit for Review</button><button type="button" class="zen-btn-primary" style="height: 28px; font-size: 11px;" @click="saveProduct()">Save</button></div>
+      <div class="zp-detail-actions"><button type="button" class="zen-btn-ghost" style="height: 28px; font-size: 11px;">Preview</button>
+         <button @click="saveProduct" :loading="saving" type="button" class="zen-btn-ghost" style="height: 28px; font-size: 11px;">Submit for Review</button><button type="button" class="zen-btn-primary" style="height: 28px; font-size: 11px;" @click="saveProduct()">Save</button></div>
    </div>
    <div class="zp-detail-body">
       <div class="zp-section-label">Content</div>
@@ -124,7 +125,7 @@
       </div>
       <div class="zp-section-label">Media</div>
       <div class="zpm-wrap">
-         <div class="zpm-grid ">
+         <div class="zpm-grid" style="display:flex">
             <div class="zpm-main zpm-draggable" v-if="mainImage" draggable="true">
                <img :src="mainImage" style="width: 100%; height: 100%; object-fit: cover; border-radius: var(--zg-radius-md);">
             </div>
@@ -358,7 +359,11 @@
 </template>
 <script setup>
 import { ref, computed } from 'vue';
-
+import { useProductsStore } from '../../../stores/products';
+// import { storeToRefs } from 'pinia'
+const productStore = useProductsStore()
+const {saving} = storeToRefs(productStore)
+const { createProduct } = productStore;
 const productNameEn = ref('');
 const productNameAr = ref('');
 const productDescription = ref({
@@ -499,22 +504,22 @@ function translateToAr() {
   window.toast?.info('Translation placeholder added');
 }
 
-function saveProduct() {
-  console.log('Saving product:', {
-    productNameEn: productNameEn.value,
-    productNameAr: productNameAr.value,
-    productDescriptionEn: productDescription.value.en,
-    productDescriptionAr: productDescription.value.ar,
-    productImages: productImages.value.length,
-    shippingWeight: shippingWeight.value,
-    hsCode: hsCode.value,
-    productTags: productTags.value,
-    markets: markets.value.filter(m => m.selected),
-    seoTitleEn: seoTitleEn.value,
-    seoDescEn: seoDescEn.value,
-    seoTitleAr: seoTitleAr.value,
-    seoDescAr: seoDescAr.value,
-  });
-  window.toast?.success('Product saved!');
+async function saveProduct() {
+   const payload = {
+      productNameEn: productNameEn.value,
+      productNameAr: productNameAr.value,
+      productDescriptionEn: productDescription.value.en,
+      productDescriptionAr: productDescription.value.ar,
+      productImages: productImages.value.length,
+      shippingWeight: shippingWeight.value,
+      hsCode: hsCode.value,
+      productTags: productTags.value,
+      markets: markets.value.filter(m => m.selected),
+      seoTitleEn: seoTitleEn.value,
+      seoDescEn: seoDescEn.value,
+      seoTitleAr: seoTitleAr.value,
+      seoDescAr: seoDescAr.value,
+   }
+   await createProduct(payload);
 }
 </script>

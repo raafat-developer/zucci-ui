@@ -27,23 +27,6 @@ const go = (id) => router.push(`/auth/${id}`);
         <router-view />
       </div>
     </div>
-
-    <nav class="zauth-stepnav">
-      <template v-for="(group, gi) in groups" :key="group.group">
-        <span v-if="gi > 0" class="zauth-stepnav-sep" />
-        <span class="zauth-stepnav-group-lbl">{{ group.group }}</span>
-        <button
-          v-for="s in group.items"
-          :key="s.id"
-          class="zauth-stepnav-btn"
-          :class="{ 'is-on': activeStep === s.id }"
-          @click="go(s.id)"
-        >
-          <span class="zauth-stepnav-num">{{ s.n }}</span>
-          {{ s.label }}
-        </button>
-      </template>
-    </nav>
   </div>
 </template>
 

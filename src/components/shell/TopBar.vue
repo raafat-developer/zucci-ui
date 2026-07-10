@@ -7,24 +7,10 @@
         <span class="zg-bc-sep">/</span>
         <span class="zg-bc-current">{{ moduleLabel }}</span>
       </div>
-      <div class="zg-market" @click.stop="marketOpen = !marketOpen">
-        <span class="zg-market-flag">{{ currentMarket.prefix }}</span>
-        <span class="zg-market-label">{{ currentMarket.label }}</span>
-        <span class="zg-market-caret">▾</span>
-        <div v-if="marketOpen" class="zg-market-menu" @click.stop>
-          <div
-            v-for="m in MARKET_OPTIONS"
-            :key="m.value"
-            class="zg-market-opt"
-            :class="{ 'is-on': m.value === region }"
-            @click="pickMarket(m)"
-          >
-            <span>{{ m.prefix }}</span
-            ><span>{{ m.label }}</span>
-          </div>
+        <div  style="position:relative;display:inline-block;min-width:220px">
+          <ZSearchableSelect :model-value="region || ''" :options="MARKET_OPTIONS" placeholder="Assign market…" @update:model-value="setMarket" />
         </div>
       </div>
-    </div>
 
     <!-- Center: search-anywhere INPUT -->
     <div class="zg-search-wrap">
@@ -99,6 +85,8 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, inject } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import ZSearchableSelect from '@/components/ui/ZSearchableSelect.vue';
+
 const route = useRoute();
 const router = useRouter();
 

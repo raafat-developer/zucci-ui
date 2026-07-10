@@ -122,6 +122,21 @@ export const useProductsStore = defineStore('products', () => {
       loading.value = false
     }
   }
+  async function createProduct(payload) {
+    saving.value = true
+    error.value = null
+    try {
+      const response = await http.post(`/catalog/products/${id}`, payload)
+      window.toast?.success('Product Added Successfully!');
+      window.location.replace(`/admin/products`)
+      return response
+    } catch (e) {
+      error.value = e.message
+      throw e
+    } finally {
+      saving.value = false
+    }  
+  }
 
   async function updateProduct(id, payload) {
     saving.value = true
@@ -251,6 +266,7 @@ export const useProductsStore = defineStore('products', () => {
     fetchDetail,
     approve,
     reject,
+    createProduct,
     submitForReview,
     setStatus,
     bulkAction,

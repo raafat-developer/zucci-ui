@@ -44,7 +44,5 @@ function onNext() {
 
   <ZButton variant="ghost" full>Continue with SSO</ZButton>
 
-  <div class="zauth-foot">
-    Don't have an admin ID? <a href="#">Request access</a>
-  </div>
+
 </template>
