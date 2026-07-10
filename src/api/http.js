@@ -39,6 +39,7 @@ http.interceptors.request.use(
     if (token) config.headers.Authorization = `Bearer ${token}`;
 
     // Global headers required by the Zucci API
+    config.headers['Access-Control-Allow-Origin'] = '*';
     config.headers['X-Locale-Id'] = config.headers['X-Locale-Id'] || '1';
     config.headers['X-Market-Id'] = config.headers['X-Market-Id'] || '1';
 
