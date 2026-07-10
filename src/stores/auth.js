@@ -3,7 +3,6 @@
 // and role helpers used by the router guard to protect admin routes.
 import { defineStore } from 'pinia';
 import http, { tokenStore } from '@/api/http';
-
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: tokenStore.get(),
@@ -59,10 +58,11 @@ export const useAuthStore = defineStore('auth', {
       } catch { return null; }
     },
     logout() {
-      http.post('/auth/logout').catch(() => {});
+      // http.post('/auth/logout').catch(() => {});
       this.token = null;
       this.user = null;
       tokenStore.clear();
+      tokenStore.setUser(null);
     },
   },
 });

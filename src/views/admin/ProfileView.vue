@@ -12,6 +12,8 @@ import ActivitySection   from './profile/ActivitySection.vue';
 import NotifPrefsSection from './profile/NotifPrefsSection.vue';
 import AppearanceSection from './profile/AppearanceSection.vue';
 import HelpSection       from './profile/HelpSection.vue';
+import { useAuthStore } from '@/stores/auth';
+const authStore = useAuthStore();
 
 const router = useRouter();
 const sec = ref('profile');
@@ -26,7 +28,10 @@ const SECTIONS = [
   { id:'help',        label:'Help & Docs' },
 ];
 
-function logout() { router.push('/auth/signin-id'); }
+function logout() { 
+  authStore.logout();
+  router.push('/auth');
+  }
 </script>
 
 <template>
