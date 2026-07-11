@@ -3,6 +3,7 @@
 // and role helpers used by the router guard to protect admin routes.
 import { defineStore } from 'pinia';
 import http, { tokenStore } from '@/api/http';
+import { toast } from '@/composables/useToast';
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: tokenStore.get(),
@@ -39,12 +40,13 @@ export const useAuthStore = defineStore('auth', {
         };
         this.token = res.token;
         this.user = user;
-        window.toast?.success('Login successful');
+        toast.success(`Welcome back, ${user.firstName || user.email}!`);
         tokenStore.set(res.token, remember);
         tokenStore.setUser(user);
         return user;
       } catch (e) {
         this.error = e.message || 'Login failed';
+        toast.error(e.message || 'Incorrect email or password. Please try again.');
         throw e;
       } finally {
         this.loading = false;
@@ -60,11 +62,11 @@ export const useAuthStore = defineStore('auth', {
     },
     logout() {
       // http.post('/auth/logout').catch(() => {});
+      toast.success('You have been signed out. See you soon!');
       this.token = null;
       this.user = null;
       tokenStore.clear();
       tokenStore.setUser(null);
-      window.toast?.success('Logged out successfully');
     },
   },
 });

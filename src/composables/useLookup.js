@@ -17,6 +17,8 @@ export function useLookup() {
     getEnum: store.getEnum,
     getEnumLabel: store.getEnumLabel,
     loadProductOptions: store.loadProductOptions,
-    loadAttributeValues: store.loadAttributeValues
+    loadAttributeValues: store.loadAttributeValues,
+    refreshCareInstructions: store.refreshCareInstructions,
+    refreshSizeGuides: store.refreshSizeGuides,
   }
 }

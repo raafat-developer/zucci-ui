@@ -239,7 +239,7 @@ const SUB_TAB = {
     Transfers: "transfers",
     "Finance Summary": "finance",
     "Returns Queue": "alerts",
-    "Inbound Shipments": "inventory",
+    "Inbound Shipments": "alerts",
   },
   discounts: {
     Promotions: "zucci",

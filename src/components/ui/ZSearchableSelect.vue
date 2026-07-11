@@ -25,8 +25,9 @@ const triggerRef = ref(null);
 const safeOptions = computed(() => props.options.filter((o) => o && o.value != null && o.label != null));
 const filtered = computed(() => {
   const q = query.value.trim().toLowerCase();
+  // Always keep _isAction sentinels visible regardless of search query
   if (!q) return safeOptions.value;
-  return safeOptions.value.filter((o) => o.label.toLowerCase().includes(q));
+  return safeOptions.value.filter((o) => o._isAction || o.label.toLowerCase().includes(q));
 });
 const selected = computed(() => safeOptions.value.find((o) => o.value === props.modelValue) || null);
 
@@ -66,17 +67,19 @@ function pick(opt) {
         />
       </div>
       <div class="zsel-list">
-        <button
-          v-for="opt in filtered"
-          :key="opt.value"
-          type="button"
-          class="zsel-opt"
-          :class="{ 'is-selected': opt.value === modelValue }"
-          @click="pick(opt)"
-        >
-          <span v-if="opt.flag" class="zsel-flag">{{ opt.flag }}</span>
-          {{ opt.label }}
-        </button>
+        <template v-for="opt in filtered" :key="opt.value">
+          <!-- Separator line before action sentinels -->
+          <div v-if="opt._isAction" class="zsel-action-sep" />
+          <button
+            type="button"
+            class="zsel-opt"
+            :class="{ 'is-selected': opt.value === modelValue, 'is-action': opt._isAction }"
+            @click="pick(opt)"
+          >
+            <span v-if="opt.flag" class="zsel-flag">{{ opt.flag }}</span>
+            {{ opt.label }}
+          </button>
+        </template>
         <div v-if="!filtered.length" class="zsel-empty">No results</div>
       </div>
     </div>
@@ -153,5 +156,16 @@ function pick(opt) {
 }
 .zsel-opt:hover { background: var(--zg-panel); }
 .zsel-opt.is-selected { background: var(--zg-accent-tint); color: var(--zg-accent); }
+.zsel-opt.is-action {
+  color: var(--zg-accent);
+  font-weight: 600;
+  font-size: 12px;
+}
+.zsel-opt.is-action:hover { background: var(--zg-accent-tint); }
+.zsel-action-sep {
+  height: 1px;
+  background: var(--zg-line);
+  margin: 4px 6px;
+}
 .zsel-empty { padding: 14px 10px; text-align: center; color: var(--zg-text-xdim); font-size: 12px; }
 </style>

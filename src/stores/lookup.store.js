@@ -207,6 +207,24 @@ export const useLookupStore = defineStore('lookup', () => {
     }
   }
 
+  async function refreshCareInstructions() {
+    try {
+      const res = await getCareInstructions()
+      data.value.careInstructions = getArray(res)
+    } catch (e) {
+      console.error('Failed to refresh care instructions:', e)
+    }
+  }
+
+  async function refreshSizeGuides() {
+    try {
+      const res = await getSizeGuides()
+      data.value.sizeGuides = getArray(res)
+    } catch (e) {
+      console.error('Failed to refresh size guides:', e)
+    }
+  }
+
   // Helper methods
   function get(name) {
     return data.value[name] || []
@@ -257,6 +275,8 @@ export const useLookupStore = defineStore('lookup', () => {
     loadEnums,
     loadProductOptions,
     loadAttributeValues,
+    refreshCareInstructions,
+    refreshSizeGuides,
     get,
     getStatus,
     getEnum,
