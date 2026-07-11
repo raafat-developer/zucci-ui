@@ -1,15 +1,6 @@
 <script setup>
-/**
- * WarehouseDetail — 9-tab detail shell. Faithful port of React WarehouseDetail.
- * Tabs: Overview · Inventory · Inbound · Outbound · Returns ·
- *       Transfers · Locations · Finance · Settings
- */
 import { ref, computed } from 'vue';
-import {
-  ZCW_TYPE_META, ZCW_STATUS_META, ZCW_ALERTS as SEED_ALERTS,
-  ZCW_INBOUND, ZCW_RETURNS, ZCW_TRANSFERS,
-} from '@/data/warehouseData';
-
+import { ZCW_TYPE_META, ZCW_STATUS_META, ZCW_ALERTS, ZCW_INBOUND, ZCW_RETURNS, ZCW_TRANSFERS } from '@/data/warehouseData';
 import OverviewTab   from './tabs/OverviewTab.vue';
 import InventoryTab  from './tabs/InventoryTab.vue';
 import InboundTab    from './tabs/InboundTab.vue';
@@ -25,13 +16,13 @@ const emit  = defineEmits(['back']);
 
 const tab = ref('overview');
 
-const typeMeta   = (t) => ZCW_TYPE_META[t] || {};
-const statusMeta = (s) => ZCW_STATUS_META[s] || ZCW_STATUS_META.active;
+const typeMeta = t => ZCW_TYPE_META[t] || {};
+const statMeta = s => ZCW_STATUS_META[s] || ZCW_STATUS_META.active;
 
-const alerts    = computed(() => SEED_ALERTS.filter(a => a.warehouse_id === props.wh.id));
+const alerts    = computed(() => ZCW_ALERTS.filter(a => a.warehouse_id === props.wh.id));
 const danger    = computed(() => alerts.value.filter(a => a.severity === 'danger').length);
-const inbound   = computed(() => (ZCW_INBOUND   || []).filter(i => i.warehouse_id === props.wh.id));
-const returns   = computed(() => (ZCW_RETURNS   || []).filter(r => r.warehouse_id === props.wh.id));
+const inbound   = computed(() => (ZCW_INBOUND || []).filter(i => i.warehouse_id === props.wh.id));
+const returns   = computed(() => (ZCW_RETURNS || []).filter(r => r.warehouse_id === props.wh.id));
 const transfers = computed(() => (ZCW_TRANSFERS || []).filter(t => t.from_id === props.wh.id || t.to_id === props.wh.id));
 
 const TABS = computed(() => [
@@ -59,12 +50,11 @@ const TABS = computed(() => [
       <span class="zwh-bc-name">{{ wh.flag }} {{ wh.name }}</span>
       <div class="zwh-detail-meta">
         <span v-for="t in wh.types" :key="t" class="zwh-type-badge"
-          :style="{ color: typeMeta(t).color, background: typeMeta(t).bg, borderColor: typeMeta(t).border }">
+          :style="{ color:typeMeta(t).color, background:typeMeta(t).bg, borderColor:typeMeta(t).border }">
           {{ typeMeta(t).label }}
         </span>
-        <span class="zwh-status-pill"
-          :style="{ color: statusMeta(wh.status).color, background: statusMeta(wh.status).bg }">
-          {{ statusMeta(wh.status).label }}
+        <span class="zwh-status-pill" :style="{ color:statMeta(wh.status).color, background:statMeta(wh.status).bg }">
+          {{ statMeta(wh.status).label }}
         </span>
         <span v-if="danger > 0" style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--zg-danger);background:oklch(0.70 0.18 25 / 0.1);padding:3px 8px;border-radius:4px;border:1px solid oklch(0.70 0.18 25 / 0.3);">
           <svg viewBox="0 0 12 12" width="10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 1L11 10H1L6 1Z"/><line x1="6" y1="5" x2="6" y2="7.5"/></svg>
@@ -91,15 +81,15 @@ const TABS = computed(() => [
 
     <!-- Tab content -->
     <div class="zwh-tab-content">
-      <OverviewTab   v-if="tab === 'overview'"   :wh="wh" />
-      <InventoryTab  v-else-if="tab === 'inventory'"  :wh="wh" />
-      <InboundTab    v-else-if="tab === 'inbound'"    :wh="wh" />
-      <OutboundTab   v-else-if="tab === 'outbound'"   :wh="wh" />
-      <ReturnsTab    v-else-if="tab === 'returns'"    :wh="wh" />
-      <TransfersTab  v-else-if="tab === 'transfers'"  :wh="wh" />
-      <LocationsTab  v-else-if="tab === 'locations'"  :wh="wh" />
-      <FinanceTab    v-else-if="tab === 'finance'"    :wh="wh" />
-      <SettingsTab   v-else-if="tab === 'settings'"   :wh="wh" />
+      <OverviewTab  v-if="tab === 'overview'"   :wh="wh" />
+      <InventoryTab v-else-if="tab === 'inventory'"  :wh="wh" />
+      <InboundTab   v-else-if="tab === 'inbound'"    :wh="wh" />
+      <OutboundTab  v-else-if="tab === 'outbound'"   :wh="wh" />
+      <ReturnsTab   v-else-if="tab === 'returns'"    :wh="wh" />
+      <TransfersTab v-else-if="tab === 'transfers'"  :wh="wh" />
+      <LocationsTab v-else-if="tab === 'locations'"  :wh="wh" />
+      <FinanceTab   v-else-if="tab === 'finance'"    :wh="wh" />
+      <SettingsTab  v-else-if="tab === 'settings'"   :wh="wh" />
     </div>
   </div>
 </template>
