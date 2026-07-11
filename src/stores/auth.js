@@ -39,6 +39,7 @@ export const useAuthStore = defineStore('auth', {
         };
         this.token = res.token;
         this.user = user;
+        window.toast?.success('Login successful');
         tokenStore.set(res.token, remember);
         tokenStore.setUser(user);
         return user;
@@ -63,6 +64,7 @@ export const useAuthStore = defineStore('auth', {
       this.user = null;
       tokenStore.clear();
       tokenStore.setUser(null);
+      window.toast?.success('Logged out successfully');
     },
   },
 });

@@ -12,3 +12,11 @@ export const uploadFile = (file, fileCategoryId = 1) => {
     }
   });
 };
+
+export const getFiles = (params = {}) => {
+  return http.get('/files', { params });
+};
+
+export const deleteFile = (id) => {
+  return http.delete(`/files/${id}`);
+};

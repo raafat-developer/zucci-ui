@@ -126,7 +126,7 @@ export const useProductsStore = defineStore('products', () => {
     saving.value = true
     error.value = null
     try {
-      const response = await http.post(`/catalog/products/${id}`, payload)
+      const response = await http.post('/catalog/products', payload)
       window.toast?.success('Product Added Successfully!');
       window.location.replace(`/admin/products`)
       return response
@@ -135,7 +135,7 @@ export const useProductsStore = defineStore('products', () => {
       throw e
     } finally {
       saving.value = false
-    }  
+    }
   }
 
   async function updateProduct(id, payload) {
@@ -158,15 +158,47 @@ export const useProductsStore = defineStore('products', () => {
   }
 
   async function approve(id) {
-    return updateProduct(id, { approvalStatus: 'approved', status: 'active' })
+    saving.value = true
+    error.value = null
+    try {
+      const response = await http.post(`/catalog/products/${id}/approve`)
+      window.toast?.success('Product approved successfully!')
+      return response
+    } catch (e) {
+      error.value = e.message
+      throw e
+    } finally {
+      saving.value = false
+    }
   }
 
-  async function reject(id, reason) {
-    return updateProduct(id, { approvalStatus: 'rejected', status: 'draft', rejectionReason: reason })
+  async function reject(id, payload) {
+    saving.value = true
+    error.value = null
+    try {
+      const response = await http.post(`/catalog/products/${id}/reject`, payload)
+      window.toast?.success('Product rejected successfully!')
+      return response
+    } catch (e) {
+      error.value = e.message
+      throw e
+    } finally {
+      saving.value = false
+    }
   }
 
   async function submitForReview(id) {
-    return updateProduct(id, { approvalStatus: 'pending_review' })
+    saving.value = true
+    error.value = null
+    try {
+      const response = await http.post(`/catalog/products/${id}/submit-for-review`)
+      return response
+    } catch (e) {
+      error.value = e.message
+      throw e
+    } finally {
+      saving.value = false
+    }
   }
 
   async function setStatus(id, status) {

@@ -7,7 +7,13 @@ import {
   getMarkets,
   getStatuses,
   getEnums,
-  getProductOptions
+  getProductOptions,
+  getBrands,
+  getCategories,
+  getSizeGuides,
+  getCareInstructions,
+  getAttributes,
+  getAttributeValues,
 } from '@/api/lookup.api'
 
 const STATUS_DOMAINS = [
@@ -35,7 +41,6 @@ const ENUM_TYPES = [
   'attribute_input_type',
   'category_banner_type',
   'file_category',
-  'b2b_account_type'
 ]
 
 export const useLookupStore = defineStore('lookup', () => {
@@ -48,14 +53,23 @@ export const useLookupStore = defineStore('lookup', () => {
     markets: [],
     statuses: {},
     enums: {},
-    productOptions: {}
+    productOptions: {},
+    brands: [],
+    categories: [],
+    sizeGuides: [],
+    careInstructions: [],
+    attributes: [],
+    attributeValues: {},
+    fulfillmentModes: [],
+    returnPolicies: [],
+    shippingUnits: []
   })
 
   let loadPromise = null
   const statusPromises = new Map()
 
   async function load(options = {}) {
-    const { includeStatuses = false, statusDomains = [] } = options
+    const { includeStatuses = false, statusDomains = [], markets = false } = options
 
     if (!loaded.value) {
       if (!loadPromise) {
@@ -72,16 +86,38 @@ export const useLookupStore = defineStore('lookup', () => {
     if (includeStatuses) {
       await loadStatuses(statusDomains.length ? statusDomains : STATUS_DOMAINS)
     }
+
+    if (markets && (!data.value.markets || !data.value.markets.length)) {
+      try {
+        const res = await getMarkets()
+        data.value.markets = getArray(res)
+      } catch (e) {
+        console.error('Failed to load markets explicitly:', e)
+      }
+    }
   }
+
+  const getArray = (res) => {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res.data)) return res.data;
+    if (Array.isArray(res.items)) return res.items;
+    return [];
+  };
 
   async function _doLoad() {
     loading.value = true
     try {
       const promises = [
-        getCountries().then(res => data.value.countries = res.data || []).catch(e => console.error('Failed to load countries:', e)),
-        getCurrencies().then(res => data.value.currencies = res.data || []).catch(e => console.error('Failed to load currencies:', e)),
-        getLocales().then(res => data.value.locales = res.data || []).catch(e => console.error('Failed to load locales:', e)),
-        getMarkets().then(res => data.value.markets = res.data || []).catch(e => console.error('Failed to load markets:', e)),
+        getCountries().then(res => data.value.countries = getArray(res)).catch(e => console.error('Failed to load countries:', e)),
+        getCurrencies().then(res => data.value.currencies = getArray(res)).catch(e => console.error('Failed to load currencies:', e)),
+        getLocales().then(res => data.value.locales = getArray(res)).catch(e => console.error('Failed to load locales:', e)),
+        getMarkets().then(res => data.value.markets = getArray(res)).catch(e => console.error('Failed to load markets:', e)),
+        getBrands().then(res => data.value.brands = getArray(res)).catch(e => console.error('Failed to load brands:', e)),
+        getCategories().then(res => data.value.categories = getArray(res)).catch(e => console.error('Failed to load categories:', e)),
+        getSizeGuides().then(res => data.value.sizeGuides = getArray(res)).catch(e => console.error('Failed to load size guides:', e)),
+        getCareInstructions().then(res => data.value.careInstructions = getArray(res)).catch(e => console.error('Failed to load care instructions:', e)),
+        getAttributes().then(res => data.value.attributes = getArray(res)).catch(e => console.error('Failed to load attributes:', e)),
         loadEnums()
       ]
       await Promise.all(promises)
@@ -119,7 +155,7 @@ export const useLookupStore = defineStore('lookup', () => {
 
     const request = getStatuses(domain)
       .then(res => {
-        data.value.statuses[domain] = res.data || []
+        data.value.statuses[domain] = getArray(res)
         return data.value.statuses[domain]
       })
       .catch(e => {
@@ -135,15 +171,16 @@ export const useLookupStore = defineStore('lookup', () => {
   }
 
   async function loadEnums() {
-    const enumPromises = ENUM_TYPES.map(async type => {
-      try {
-        const res = await getEnums(type)
-        data.value.enums[type] = res.data || []
-      } catch (e) {
-        console.error(`Failed to load enum ${type}:`, e)
-      }
-    })
-    await Promise.all(enumPromises)
+    try {
+      // Single request returns: { localeId, enums: { type_name: [{ id, label, sortOrder }] } }
+      const res = await getEnums(ENUM_TYPES)
+      const enumsMap = res?.enums || {}
+      ENUM_TYPES.forEach(type => {
+        data.value.enums[type] = Array.isArray(enumsMap[type]) ? enumsMap[type] : []
+      })
+    } catch (e) {
+      console.error('Failed to load enums:', e)
+    }
   }
 
   async function loadProductOptions(productId) {
@@ -154,6 +191,18 @@ export const useLookupStore = defineStore('lookup', () => {
       return data.value.productOptions[productId]
     } catch (e) {
       console.error(`Failed to load product options for ${productId}:`, e)
+      return []
+    }
+  }
+
+  async function loadAttributeValues(attributeId) {
+    if (data.value.attributeValues[attributeId]) return data.value.attributeValues[attributeId]
+    try {
+      const res = await getAttributeValues(attributeId)
+      data.value.attributeValues[attributeId] = res.data || []
+      return data.value.attributeValues[attributeId]
+    } catch (e) {
+      console.error(`Failed to load attribute values for ${attributeId}:`, e)
       return []
     }
   }
@@ -207,6 +256,7 @@ export const useLookupStore = defineStore('lookup', () => {
     loadStatusDomain,
     loadEnums,
     loadProductOptions,
+    loadAttributeValues,
     get,
     getStatus,
     getEnum,

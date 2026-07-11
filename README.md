@@ -1,39 +1,148 @@
 # Zucci Admin Dashboard — Vue 3 Application
 
-A **Vite + Vue 3 (Composition API)** conversion of the Zucci Admin Dashboard.
-Reusable components, Vue Router, scoped CSS, no inline styles, responsive shell —
-built as a real, runnable project (not a single HTML file).
+Vite + Vue 3 (Composition API) admin dashboard for Zucci.
+Reusable components, Vue Router, Pinia, scoped CSS, responsive shell.
 
 ---
 
 ## Quick start
 
+### With Make + Docker (recommended)
+
 ```bash
-cd vue-app
+make help          # list all targets
+make local         # hot-reload dev  → http://localhost:5173
+make staging       # staging nginx   → http://localhost:8081
+make prod          # production nginx → http://localhost:8080
+```
+
+### With npm (no Docker)
+
+```bash
 npm install
-npm run dev      # http://localhost:5173
-npm run build    # production build to dist/
-npm run preview  # preview the build
+npm run dev              # http://localhost:5173
+npm run build:staging    # dist/ → staging API
+npm run build:prod       # dist/ → production API
+npm run preview
 ```
 
 Fonts (Geist / Geist Mono) load from Google Fonts in `index.html`.
 
 ---
 
-## What's included (fully converted & working)
+## Environments
+
+| Env | Vite mode | API base | Docker / Make | Port |
+|-----|-----------|----------|---------------|------|
+| **local / dev** | `development` | `https://api.zucci.xyz/api/v1/` | `make local` | `5173` |
+| **staging** | `staging` | `https://api.zucci.xyz/api/v1/` | `make staging` | `8081` |
+| **production** | `production` | `https://api.zucci.com/api/v1/` | `make prod` | `8080` |
+
+Config files:
+
+- `.env.development` — local / `npm run dev`
+- `.env.staging` — staging builds
+- `.env.production` — production builds
+- `.env.example` — documented template
+- `.env.local` — optional local overrides (gitignored)
+
+---
+
+## Make targets
+
+```bash
+make help
+```
+
+| Target | Description |
+|--------|-------------|
+| `make install` | `npm ci` |
+| `make dev` | Vite on the host (no Docker) |
+| `make local` | Docker Vite hot-reload → `:5173` |
+| `make local-build` | Rebuild & start local |
+| `make staging` | Build & run staging nginx → `:8081` |
+| `make prod` | Build & run production nginx → `:8080` |
+| `make tf-plan ENV=staging` | Plan AWS infra |
+| `make tf-apply ENV=prod` | Apply AWS infra |
+| `make tf-output ENV=staging` | Print role ARN / bucket / CF id |
+| `make logs SERVICE=staging` | Tail container logs |
+| `make down` | Stop all compose services |
+| `make clean` | Remove `dist/` |
+| `make clean-all` | Stop containers + remove volumes |
+
+---
+
+## CI / CD (GitHub Actions + Terraform)
+
+Mirrors **zucci-api**: OIDC (no long-lived AWS keys), branch → environment.
+
+| Branch / trigger | Environment | How it deploys | URL |
+|------------------|-------------|----------------|-----|
+| `staging` push | staging | ECR image (arm64) → SSM on shared API EC2 `:8080` | `admin.zucci.xyz` → EIP:8080 |
+| `main` push | prod | Vite build → S3 sync → CloudFront invalidation | `https://admin.zucci.com` |
+| **Manual Deploy** (Actions UI) | staging or prod | Same pipelines — pick env, no commit needed | — |
+
+Manual run: **Actions → Manual Deploy → Run workflow** (choose `staging` or `prod`).
+
+### One-time setup
+
+```bash
+# 1. Staging infra (ECR + GitHub OIDC role) — requires API EC2 already up
+make tf-apply ENV=staging
+make tf-output ENV=staging   # copy github_actions_role_arn
+
+# 2. Production infra (S3 + CloudFront + OIDC role)
+make tf-apply ENV=prod
+make tf-output ENV=prod      # copy role ARN + cloudfront_distribution_id
+```
+
+GitHub repo → **Settings → Environments**:
+
+| Secret / variable | staging | prod |
+|-------------------|---------|------|
+| `AWS_ROLE_ARN` (secret) | ✅ | ✅ |
+| `CLOUDFRONT_DISTRIBUTION_ID` (variable) | — | ✅ |
+| `AWS_REGION` (variable, optional) | `us-east-1` | `us-east-1` |
+
+Also open API CORS for `https://admin.zucci.xyz` / `https://admin.zucci.com` (see `infra/terraform/README.md`).
+
+Full details: [`infra/terraform/README.md`](infra/terraform/README.md).
+
+---
+
+## Docker
+
+Multi-stage `Dockerfile`:
+
+1. **development** — Node + Vite (hot reload)
+2. **build** — `vite build --mode <staging|production>`
+3. **production** — nginx serving `dist/` (SPA + `/healthz`)
+
+```bash
+# equivalent to make targets
+docker compose up local
+docker compose up staging -d --build
+docker compose up prod -d --build
+docker compose down
+```
+
+---
+
+## What's included
 
 | Area | Status | Files |
 |------|--------|-------|
 | **Project scaffold** | ✅ | `package.json`, `vite.config.js`, `index.html`, `src/main.js`, `src/App.vue` |
+| **Docker / Make** | ✅ | `Dockerfile`, `docker-compose.yml`, `Makefile`, `docker/nginx/` |
+| **CI / CD + Terraform** | ✅ | `.github/workflows/`, `infra/terraform/` |
 | **Design tokens** (all `--zg-*` vars) | ✅ | `src/assets/styles/tokens.css` |
 | **Global base + resets** | ✅ | `src/assets/styles/base.css` |
 | **Vue Router** (auth flow + all module routes) | ✅ | `src/router/index.js` |
 | **Reusable UI kit** (scoped CSS) | ✅ | `src/components/ui/*` |
-| **Auth flow** (split screen, ops panel, 8 step screens, step navigator) | ✅ | `src/views/auth/*` |
-| **App shell** (icon rail + topbar + layout grid) | ✅ | `src/layouts/AdminLayout.vue`, `src/components/shell/*` |
-| **Dashboard** (market-aware KPI strip + live orders panel) | ✅ | `src/views/DashboardView.vue` |
-| **Analytics charts** (vue-echarts reference pattern) | ✅ | `src/views/AnalyticsView.vue` |
-| **Module scaffolds** (routed, shell-wired, UI-kit demo) | ✅ | `src/views/ModuleStub.vue` |
+| **Auth flow** | ✅ | `src/views/auth/*` |
+| **App shell** | ✅ | `src/layouts/AdminLayout.vue`, `src/components/shell/*` |
+| **Dashboard** | ✅ | `src/views/DashboardView.vue` |
+| **Analytics charts** (vue-echarts) | ✅ | `src/views/AnalyticsView.vue` |
 
 ### Reusable UI components (`src/components/ui/`)
 
@@ -48,103 +157,71 @@ Fonts (Geist / Geist Mono) load from Google Fonts in `index.html`.
 
 ### Composables (`src/composables/`)
 
-- **useClickOutside** — deferred-listener outside-click (fixes the "dropdown closes on first click" bug)
-- **useTheme** — runtime accent theming (writes `--zg-accent` / `--zg-accent-tint`)
+- **useClickOutside** — deferred-listener outside-click
+- **useTheme** — runtime accent theming (`--zg-accent` / `--zg-accent-tint`)
 
 ---
 
 ## Architecture
 
 ```
-vue-app/
-├── index.html                 # Vite entry, loads fonts
-├── vite.config.js             # @ alias → src/
+Front-end-admin/
+├── Makefile                   # make local | staging | prod | tf-apply | …
+├── Dockerfile                 # multi-stage: development → build → nginx
+├── docker-compose.yml         # local / staging / prod services
+├── docker/nginx/default.conf  # SPA + healthz
+├── .github/workflows/         # CI + Deploy (OIDC → EC2 / S3+CF)
+├── infra/terraform/           # staging EC2 sidecar + prod static site
+├── .env.development           # local → api.zucci.xyz
+├── .env.staging               # staging → api.zucci.xyz
+├── .env.production            # prod → api.zucci.com
+├── index.html
+├── vite.config.js
 ├── package.json
 └── src/
-    ├── main.js                # createApp + router + global css
-    ├── App.vue                # <router-view/>
-    ├── router/index.js        # /auth/:step (bare) + / (AdminLayout children)
+    ├── main.js
+    ├── App.vue
+    ├── api/                   # axios http client + mock adapter
+    ├── router/index.js
     ├── assets/styles/
-    │   ├── tokens.css         # GLOBAL — CSS vars (must not be scoped)
-    │   ├── base.css           # GLOBAL — resets, scrollbars, links
-    │   └── authForm.css       # shared auth form chrome
     ├── composables/
-    │   ├── useClickOutside.js
-    │   └── useTheme.js
     ├── components/
-    │   ├── ui/                # reusable kit (scoped CSS each)
-    │   └── shell/             # SidebarRail, TopBar
+    │   ├── ui/
+    │   └── shell/
     ├── layouts/
-    │   ├── AdminLayout.vue    # rail + topbar + <router-view/>, provides market
-    │   └── SupplierLayout.vue # 2nd user type — vendor/brand portal shell
+    │   ├── AdminLayout.vue
+    │   └── SupplierLayout.vue
     ├── views/
-    │   ├── auth/              # AuthView, AuthFlow, OpsPanel, screens/*  (shared)
-    │   ├── admin/             # ADMIN user type
-    │   │   ├── DashboardView.vue
-    │   │   ├── AnalyticsView.vue
-    │   │   ├── ProfileView.vue     # my-account (profile/security/devices/activity…)
-    │   │   └── ModuleScreen.vue    # config-driven list+detail for every module
-    │   └── supplier/          # SUPPLIER user type (2nd)
-    │       └── SupplierDashboard.vue
+    │   ├── auth/
+    │   ├── admin/
+    │   └── supplier/
     └── data/
-        ├── opsData.js         # auth ops-panel mock data
-        ├── authSteps.js       # auth step registry
-        └── adminModules.js    # KPIs/columns/rows/tabs for every admin module
+```
 
 ### Two user types
-
-The app serves two audiences off one codebase, split by route + layout:
 
 | Area | Route prefix | Layout | Who |
 |------|-------------|--------|-----|
 | **Admin console** | `/admin/*` | `AdminLayout` | Internal ops / Zucci staff |
-| **Supplier portal** | `/supplier/*` | `SupplierLayout` | Vendors / brand owners (2nd type) |
+| **Supplier portal** | `/supplier/*` | `SupplierLayout` | Vendors / brand owners |
 | **Auth** | `/auth/:step` | (bare) | Shared |
-
-Each layout provides its own rail + market state. Swap in a real auth guard
-(`router.beforeEach`) to route users to `/admin` or `/supplier` by role once a
-backend is wired.
-
-### Admin modules (config-driven)
-
-Every admin list module — Orders, Products, Warehouses, Marketplace, Customers,
-Finance, Promotions, Comms, Tickets — renders through **`ModuleScreen.vue`**,
-which reads its KPIs, tabs, columns, rows and detail fields from
-`src/data/adminModules.js` keyed by route name. Each screen is a real working
-view: KPI strip, tab filters, live search, market filtering, a sortable-ready
-table, and a row-detail drawer. To deepen any module into its full bespoke React
-equivalent, replace its `component: adminModule` in `router/index.js` with a
-dedicated `<Module>View.vue` (Dashboard, Analytics and Profile already are).
-```
 
 ### CSS strategy
 
-- **Global (not scoped):** design tokens + base resets only. CSS custom properties
-  *must* be global — every scoped block references them.
-- **Scoped (`<style scoped>`):** every component owns its styles. Class names are
-  preserved from the React build so the design is identical.
-- **No inline styles** in components (a couple of one-line demo hints in the stub
-  aside; the real modules use scoped classes throughout).
-- Large namespaced layout CSS (the `.zauth-*` ops panel) is co-located in its
-  component's scoped block, split out of the original monolithic `styles-auth.css`.
+- **Global (not scoped):** design tokens + base resets only.
+- **Scoped (`<style scoped>`):** every component owns its styles.
+- **No inline styles** in components.
 
 ### State & routing
 
-- `useState` → `ref` / `reactive`; `useEffect` → `watch` / `onMounted`;
-  `useMemo` → `computed`; portals → `<Teleport>`. (Full table in the original
-  `Vue Conversion Brief.md`.)
-- Cross-cutting state (selected **market**) is shared via `provide`/`inject`
-  from `AdminLayout` → `TopBar` + module views. Swap in Pinia if you prefer a
-  store as the app grows.
-- The React app was a single fixed screen with a JS-driven view switch; here each
-  module is a **route**, so deep links (`/warehouses`, `/analytics`) work and the
-  browser back button behaves.
+- Cross-cutting state (selected **market**) via `provide`/`inject` from `AdminLayout`.
+- Each module is a **route** — deep links and browser back work.
 
 ### Charts
 
-The React build used Recharts. Vue uses **vue-echarts** (ECharts) — the idiomatic
-Vue 3 charting lib. `AnalyticsView.vue` shows the option-object pattern (area +
-bar, interactive tooltips). Every React `<AreaChart>` / `<BarChart>` / `<PieChart>`
-maps onto an ECharts `option` object.
+**vue-echarts** (ECharts). See `AnalyticsView.vue` for the option-object pattern.
 
----
+### API client
+
+`src/api/http.js` reads `VITE_API_BASE` from the active Vite mode.
+Set `VITE_USE_MOCK=true` for the in-memory mock adapter.

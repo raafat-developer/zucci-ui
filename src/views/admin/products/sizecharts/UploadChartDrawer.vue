@@ -47,9 +47,15 @@ const addManualRow = (size) => {
 };
 const delManualRow = (ri) => { manualRows.value = manualRows.value.filter((_, i) => i !== ri); };
 
-const brands    = computed(() => [...new Set((ZC_SIZE_CHARTS || []).map((c) => c.brand))]);
+import { useLookup } from '@/composables/useLookup';
+const lookup = useLookup();
+const brands = computed(() => {
+  return lookup.get('brands').map((b) => b.name || b.translations?.[0]?.name).filter(Boolean);
+});
 const sizeTypes = ZC_SIZE_TYPES || {};
-const cats      = ["Women's Fashion", "Men's Fashion", "Kids' Fashion", 'Footwear', 'Accessories', 'Beauty & Fragrance'];
+const cats = computed(() => {
+  return lookup.get('categories').map((c) => c.name || c.label || c.translations?.[0]?.name).filter(Boolean);
+});
 
 const handleFile = (e) => {
   const f = e.target.files[0]; if (!f) return;

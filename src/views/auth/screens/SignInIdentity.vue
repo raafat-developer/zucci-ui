@@ -26,19 +26,21 @@ function onNext() {
     <p class="zauth-sub">Enter your work email and admin ID to continue.</p>
   </div>
 
-  <div class="zauth-fields">
-    <div class="zauth-field">
-      <label class="zauth-label">Work email</label>
-      <ZInput v-model="email" type="email" placeholder="you@zucci.com" autofocus />
+  <form @submit.prevent="onNext" style="display:contents">
+    <div class="zauth-fields">
+      <div class="zauth-field">
+        <label class="zauth-label">Work email</label>
+        <ZInput v-model="email" type="email" placeholder="you@zucci.com" autofocus />
+      </div>
+      <div class="zauth-field">
+        <label class="zauth-label">Admin ID</label>
+        <ZInput v-model="uid" mono prefix="ZC-" placeholder="0000" />
+        <div class="zauth-help">4-digit ID issued at onboarding. Find it in your Zucci welcome email.</div>
+      </div>
     </div>
-    <div class="zauth-field">
-      <label class="zauth-label">Admin ID</label>
-      <ZInput v-model="uid" mono prefix="ZC-" placeholder="0000" />
-      <div class="zauth-help">4-digit ID issued at onboarding. Find it in your Zucci welcome email.</div>
-    </div>
-  </div>
 
-  <ZButton variant="primary" full @click="onNext">Continue →</ZButton>
+    <ZButton variant="primary" full type="submit">Continue →</ZButton>
+  </form>
 
   <div class="zauth-divider">or</div>
 

@@ -11,14 +11,15 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0',
     port: 5173,
-    open: true,
-    proxy: {
-      '/api/v1': {
-        target: 'https://api.zucci.xyz',
-        changeOrigin: true,
-        secure: true,
-      },
+    open: false,
+    watch: {
+      usePolling: process.env.CHOKIDAR_USEPOLLING === 'true',
     },
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 4173,
   },
 });

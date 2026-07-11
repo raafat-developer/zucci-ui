@@ -7,6 +7,7 @@ export function useLookup() {
     loading: store.loading,
     loaded: store.loaded,
     data: store.data,
+    load: store.load,
     get: store.get,
     getOptions: store.getOptions,
     getLabel: store.getLabel,
@@ -15,6 +16,7 @@ export function useLookup() {
     getStatusLabel: store.getStatusLabel,
     getEnum: store.getEnum,
     getEnumLabel: store.getEnumLabel,
-    loadProductOptions: store.loadProductOptions
+    loadProductOptions: store.loadProductOptions,
+    loadAttributeValues: store.loadAttributeValues
   }
 }

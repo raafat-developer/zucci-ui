@@ -4,8 +4,11 @@
 // as a Bearer header; the response interceptor unwraps the payload and handles
 // 401 (clear session + redirect to auth) and normalizes errors.
 //
-// Set VITE_API_BASE in .env to point to the real API. To use the in-memory mock
-// instead (offline dev), set VITE_USE_MOCK=true.
+// VITE_API_BASE is set per Vite mode:
+//   development → https://api.zucci.xyz/api/v1/  (same as staging)
+//   staging     → https://api.zucci.xyz/api/v1/
+//   production  → https://api.zucci.com/api/v1/
+// Offline mock: set VITE_USE_MOCK=true.
 
 import axios from 'axios';
 import Cookies from 'js-cookie';
@@ -14,6 +17,7 @@ import { mockAdapter } from './mock';
 export const TOKEN_COOKIE = 'zucci_token';
 export const USER_COOKIE = 'zucci_user';
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
+export const APP_ENV = import.meta.env.VITE_APP_ENV || import.meta.env.MODE;
 
 export const tokenStore = {
   get: () => Cookies.get(TOKEN_COOKIE) || null,

@@ -7,25 +7,53 @@
 import { computed } from 'vue';
 import ZSearchableSelect from '@/components/ui/ZSearchableSelect.vue';
 import HierCategorySelect from './HierCategorySelect.vue';
-import {
-  RETURN_OPTIONS, SHIPPING_UNITS, FULFILLMENT_OPTIONS, COUNTRY_FLAGS, inferCountry,
-} from '@/data/productsMeta';
-import { ZCP_SIZE_GUIDES, ZCP_CARE_INSTRUCTIONS, ZCP_CATEGORY_CODES } from '@/data/productsData';
+import { SHIPPING_UNITS, FULFILLMENT_OPTIONS, COUNTRY_FLAGS, inferCountry } from '@/data/productsMeta';
+import { ZCP_CATEGORY_CODES } from '@/data/productsData';
+import { useLookup } from '@/composables/useLookup';
 
 const props = defineProps({ product: { type: Object, required: true } });
 const emit = defineEmits(['update']);
 const upd = (k, v) => emit('update', k, v);
 
-const sizeGuideOptions = [
+const lookup = useLookup();
+
+// ── Size Guides from API: /catalog/size-guides ────────────
+const sizeGuideOptions = computed(() => [
   { value: '', label: 'None (no size guide)' },
-  ...ZCP_SIZE_GUIDES.filter((s) => s && s.id && s.name).map((s) => ({ value: s.id, label: s.name })),
-  { value: '__new_sg__', label: '+ Add new size guide for this brand' },
-];
-const careOptions = [
+  ...lookup.get('sizeGuides').map((s) => ({
+    value: s.id,
+    label: s.name || s.translations?.[0]?.name || s.slug || s.id,
+  })),
+]);
+
+// ── Care Instructions from API: /catalog/care-instructions ─
+const careOptions = computed(() => [
   { value: '', label: 'None' },
-  ...ZCP_CARE_INSTRUCTIONS.map((c) => ({ value: c.id, label: c.name })),
-  { value: '__new_ci__', label: '+ Add new care instructions' },
-];
+  ...lookup.get('careInstructions').map((c) => ({
+    value: c.id,
+    label: c.name || c.translations?.[0]?.name || c.slug || c.id,
+  })),
+]);
+
+// ── Return Policy from enum: return_policy ────────────────
+// Response shape: [{ id, label, description, sortOrder }]
+const returnOpts = computed(() => {
+  const enums = lookup.getEnum('return_policy');
+  if (enums && enums.length) {
+    return enums
+      .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99))
+      .map((e) => ({ value: e.id, label: e.label || e.name }));
+  }
+  // Fallback if enum not loaded yet
+  return [
+    { value: 1, label: 'Standard (14 days)' },
+    { value: 2, label: 'Extended (21 days)' },
+    { value: 3, label: 'Non-returnable' },
+  ];
+});
+
+const shipUnits = SHIPPING_UNITS;
+const fulfillOpts = FULFILLMENT_OPTIONS;
 
 const country = computed(() => inferCountry(props.product.vendorId || props.product.brandCode));
 const countryFlag = computed(() => COUNTRY_FLAGS[country.value] || '🌍');
@@ -36,16 +64,13 @@ const autoSku = computed(() => {
   return 'Auto-generated on save';
 });
 
-const onSizeGuide = (v) => { if (v === '__new_sg__') return; upd('sizeGuideId', v); };
-const onCare = (v) => { if (v === '__new_ci__') return; upd('careInstructionId', v); };
+const onSizeGuide = (v) => upd('sizeGuideId', v);
+const onCare = (v) => upd('careInstructionId', v);
 const addTag = (e) => {
   const v = e.target.value.trim();
   if (v) { upd('tags', [...(props.product.tags || []), v]); e.target.value = ''; }
 };
 const removeTag = (t) => upd('tags', (props.product.tags || []).filter((x) => x !== t));
-const returnOpts = RETURN_OPTIONS;
-const shipUnits = SHIPPING_UNITS;
-const fulfillOpts = FULFILLMENT_OPTIONS;
 </script>
 
 <template>

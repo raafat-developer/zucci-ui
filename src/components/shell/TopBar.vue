@@ -7,13 +7,13 @@
         <span class="zg-bc-sep">/</span>
         <span class="zg-bc-current">{{ moduleLabel }}</span>
       </div>
-        <div  style="position:relative;display:inline-block;min-width:220px">
-          <ZSearchableSelect :model-value="region || ''" :options="MARKET_OPTIONS" placeholder="Assign market…" @update:model-value="setMarket" />
-        </div>
+      <div style="position:relative;display:inline-block;min-width:220px">
+        <ZSearchableSelect :model-value="region || ''" :options="MARKET_OPTIONS" placeholder="Assign market…" @update:model-value="setMarket" />
       </div>
+    </div>
 
-    <!-- Center: search-anywhere INPUT -->
-    <div class="zg-search-wrap">
+    <!-- Center: MacBook Spotlight search trigger -->
+    <div class="zg-search-trigger" @click="openSearchModal">
       <svg
         class="zg-search-ico"
         width="15"
@@ -26,36 +26,8 @@
         <circle cx="11" cy="11" r="7" />
         <path d="m21 21-4.3-4.3" />
       </svg>
-      <input
-        ref="searchEl"
-        v-model="query"
-        class="zg-search-input"
-        type="text"
-        placeholder="Search anywhere — orders, brands, customers, pages…"
-        @input="onInput"
-        @focus="showResults = true"
-        @blur="onBlur"
-        @keydown.enter.prevent="onEnter"
-        @keydown.down.prevent="onArrow(1)"
-        @keydown.up.prevent="onArrow(-1)"
-      />
+      <span class="zg-search-placeholder">Search anywhere — orders, products, customers…</span>
       <kbd class="zg-search-kbd">⌘K</kbd>
-      <div v-if="showResults && results.length" class="zg-search-results">
-        <div
-          v-for="(r, i) in results"
-          :key="r.path"
-          class="zg-search-result"
-          :class="{ 'is-active': i === activeIdx }"
-          @mousedown.prevent="go(r)"
-          @mouseenter="activeIdx = i"
-        >
-          <span>{{ r.label }}</span
-          ><span class="zg-search-path">{{ r.path }}</span>
-        </div>
-      </div>
-      <div v-else-if="showResults && query.trim()" class="zg-search-results">
-        <div class="zg-search-empty">No matches for "{{ query }}"</div>
-      </div>
     </div>
 
     <!-- Right: clock + refresh -->
@@ -78,6 +50,72 @@
           <path d="M21 3v6h-6" />
         </svg>
       </button>
+    </div>
+
+    <!-- Spotlight Search Modal overlay -->
+    <div v-if="isSearchModalOpen" class="zg-spotlight-backdrop" @click="closeSearchModal">
+      <div class="zg-spotlight-modal" @click.stop>
+        <div class="zg-spotlight-header">
+          <svg
+            class="zg-spotlight-search-ico"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input
+            ref="spotlightInput"
+            v-model="query"
+            class="zg-spotlight-input"
+            type="text"
+            placeholder="Type a command or search…"
+            @keydown.enter.prevent="onEnter"
+            @keydown.down.prevent="onArrow(1)"
+            @keydown.up.prevent="onArrow(-1)"
+            @keydown.esc="closeSearchModal"
+          />
+          <kbd class="zg-spotlight-esc">ESC</kbd>
+        </div>
+
+        <div class="zg-spotlight-body">
+          <div v-if="results.length" class="zg-spotlight-results">
+            <div class="zg-spotlight-section-title">Search Results</div>
+            <div
+              v-for="(r, i) in results"
+              :key="r.path"
+              class="zg-spotlight-result-item"
+              :class="{ 'is-active': i === activeIdx }"
+              @click="go(r)"
+              @mouseenter="activeIdx = i"
+            >
+              <span class="zg-spotlight-result-label">{{ r.label }}</span>
+              <span class="zg-spotlight-result-path">{{ r.path }}</span>
+            </div>
+          </div>
+          <div v-else-if="query.trim()" class="zg-spotlight-empty">
+            No matches found for "{{ query }}"
+          </div>
+          <div v-else class="zg-spotlight-recent">
+            <div class="zg-spotlight-section-title">Quick Navigation</div>
+            <div
+              v-for="(r, i) in SEARCH_INDEX.slice(0, 8)"
+              :key="r.path"
+              class="zg-spotlight-result-item"
+              :class="{ 'is-active': i === activeIdx }"
+              @click="go(r)"
+              @mouseenter="activeIdx = i"
+            >
+              <span class="zg-spotlight-result-label">{{ r.label }}</span>
+              <span class="zg-spotlight-result-path">{{ r.path }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
 </template>
@@ -107,7 +145,6 @@ const MARKET_OPTIONS = [
   { value: "bh", label: "Bahrain", prefix: "🇧🇭", tz: "Asia/Bahrain" },
 ];
 
-// Route → module breadcrumb label
 const MODULE_LABELS = {
   "": "Dashboard",
   dashboard: "Dashboard",
@@ -137,28 +174,28 @@ const MODULE_LABELS = {
   profile: "Profile",
   settings: "Settings",
 };
+
 const moduleLabel = computed(() => {
   const seg = route.path.split("/").filter(Boolean)[0] || "";
   return MODULE_LABELS[seg] || route.meta?.title || "Dashboard";
 });
 
-// Market selector - hook up to the injected market if provided
 const injectedMarket = inject('market', null);
 const region = ref(injectedMarket ? injectedMarket.value : "mena");
-const marketOpen = ref(false);
+
 const currentMarket = computed(
   () =>
     MARKET_OPTIONS.find((m) => m.value === region.value) || MARKET_OPTIONS[1],
 );
-function pickMarket(m) {
-  region.value = m.value;
-  if (injectedMarket) {
-    injectedMarket.value = m.value;
-  }
-  marketOpen.value = false;
-}
 
-// ── Search-anywhere command bar (real input) ──
+const setMarket = (val) => {
+  region.value = val;
+  if (injectedMarket) {
+    injectedMarket.value = val;
+  }
+  refresh();
+};
+
 const SEARCH_INDEX = [
   { label: "Dashboard", path: "/" },
   { label: "Orders", path: "/orders" },
@@ -186,10 +223,12 @@ const SEARCH_INDEX = [
   { label: "Settings", path: "/settings" },
   { label: "Profile", path: "/profile" },
 ];
-const searchEl = ref(null);
+
 const query = ref("");
-const showResults = ref(false);
+const isSearchModalOpen = ref(false);
+const spotlightInput = ref(null);
 const activeIdx = ref(0);
+
 const results = computed(() => {
   const q = query.value.trim().toLowerCase();
   if (!q) return [];
@@ -198,44 +237,56 @@ const results = computed(() => {
     8,
   );
 });
-function onInput() {
-  showResults.value = true;
+
+const openSearchModal = () => {
+  isSearchModalOpen.value = true;
+  query.value = "";
   activeIdx.value = 0;
-}
+  setTimeout(() => {
+    spotlightInput.value && spotlightInput.value.focus();
+  }, 50);
+};
+
+const closeSearchModal = () => {
+  isSearchModalOpen.value = false;
+  query.value = "";
+};
+
 function go(item) {
   if (!item) return;
   router.push(item.path);
-  query.value = "";
-  showResults.value = false;
-  searchEl.value && searchEl.value.blur();
-}
-function onEnter() {
-  go(results.value[activeIdx.value] || results.value[0]);
-}
-function onArrow(d) {
-  if (!results.value.length) return;
-  activeIdx.value =
-    (activeIdx.value + d + results.value.length) % results.value.length;
-}
-function onBlur() {
-  setTimeout(() => {
-    showResults.value = false;
-  }, 150);
+  closeSearchModal();
 }
 
-// ⌘K / Ctrl+K focus
+function onEnter() {
+  const list = results.value.length ? results.value : SEARCH_INDEX.slice(0, 8);
+  go(list[activeIdx.value] || list[0]);
+}
+
+function onArrow(d) {
+  const list = results.value.length ? results.value : SEARCH_INDEX.slice(0, 8);
+  if (!list.length) return;
+  activeIdx.value = (activeIdx.value + d + list.length) % list.length;
+}
+
 function onKey(e) {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
     e.preventDefault();
-    searchEl.value && searchEl.value.focus();
-  }
-  if (e.key === "Escape") {
-    showResults.value = false;
-    searchEl.value && searchEl.value.blur();
+    openSearchModal();
+  } else if (e.key.toLowerCase() === "k" && !isSearchModalOpen.value) {
+    const activeEl = document.activeElement;
+    const isTyping = activeEl && (
+      activeEl.tagName === "INPUT" || 
+      activeEl.tagName === "TEXTAREA" || 
+      activeEl.isContentEditable
+    );
+    if (!isTyping) {
+      e.preventDefault();
+      openSearchModal();
+    }
   }
 }
 
-// Live clock
 const now = ref(new Date());
 let timer = null;
 const clock = computed(() => {
@@ -258,6 +309,7 @@ onMounted(() => {
   }, 1000);
   window.addEventListener("keydown", onKey);
 });
+
 onUnmounted(() => {
   clearInterval(timer);
   window.removeEventListener("keydown", onKey);
@@ -300,134 +352,144 @@ function refresh() {
   color: var(--zg-text);
   font-weight: 600;
 }
-.zg-market {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border: 1px solid var(--zg-line);
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 12px;
-  background: var(--zg-panel);
-  color: var(--zg-text);
-}
-.zg-market-caret {
-  color: var(--zg-text-dim);
-  font-size: 9px;
-}
-.zg-market-menu {
-  position: absolute;
-  top: 36px;
-  left: 0;
-  min-width: 200px;
-  background: var(--zg-bg-elev);
-  border: 1px solid var(--zg-line);
-  border-radius: 10px;
-  padding: 5px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, .18);
-  z-index: 50;
-}
-.zg-market-opt {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 9px;
-  border-radius: 7px;
-  font-size: 12px;
-  color: var(--zg-text);
-  cursor: pointer;
-}
-.zg-market-opt:hover {
-  background: var(--zg-panel);
-}
-.zg-market-opt.is-on {
-  background: var(--zg-panel);
-  font-weight: 600;
-}
-.zg-search-wrap {
+
+/* Command Trigger style */
+.zg-search-trigger {
   position: relative;
   flex: 1;
   max-width: 560px;
   margin: 0 auto;
   display: flex;
   align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--zg-line);
+  border-radius: 8px;
+  background: var(--zg-panel);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.zg-search-trigger:hover {
+  border-color: var(--zg-accent);
+  background: var(--zg-bg-elev);
 }
 .zg-search-ico {
-  position: absolute;
-  left: 12px;
   color: var(--zg-text-dim);
-  pointer-events: none;
+  margin-right: 10px;
 }
-.zg-search-input {
-  width: 100%;
-  height: 30px;
-  padding: 0 64px 0 36px;
-  border: 1px solid var(--zg-line);
-  border-radius: 6px;
-  background: var(--zg-panel);
-  color: var(--zg-text);
+.zg-search-placeholder {
   font-size: 12.5px;
-  outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.zg-search-input:focus {
-  border-color: var(--zg-accent);
-}
-.zg-search-input::placeholder {
   color: var(--zg-text-dim);
+  flex: 1;
 }
 .zg-search-kbd {
-  position: absolute;
-  right: 10px;
   font-size: 10px;
   font-family: var(--zg-mono);
   color: var(--zg-text-dim);
   border: 1px solid var(--zg-line);
-  border-radius: 5px;
-  padding: 2px 6px;
+  border-radius: 4px;
+  padding: 1px 5px;
   background: var(--zg-bg-elev);
 }
-.zg-search-results {
-  position: absolute;
-  top: 36px;
-  left: 0;
-  right: 0;
+
+/* Spotlight modal styles */
+.zg-spotlight-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  z-index: 100000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 100px;
+}
+.zg-spotlight-modal {
+  width: 600px;
   background: var(--zg-bg-elev);
   border: 1px solid var(--zg-line);
-  border-radius: 10px;
-  padding: 5px;
-  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.2);
-  z-index: 50;
-  max-height: 340px;
-  overflow: auto;
+  border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 450px;
+  animation: spotlightFadeIn 0.15s ease-out;
 }
-.zg-search-result {
+@keyframes spotlightFadeIn {
+  from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.zg-spotlight-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--zg-line);
+  gap: 12px;
+}
+.zg-spotlight-search-ico {
+  color: var(--zg-accent);
+  flex-shrink: 0;
+}
+.zg-spotlight-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--zg-text);
+  outline: none;
+}
+.zg-spotlight-esc {
+  font-family: inherit;
+  font-size: 9px;
+  padding: 2px 5px;
+  border: 1px solid var(--zg-line);
+  border-radius: 4px;
+  color: var(--zg-text-dim);
+  background: var(--zg-panel);
+}
+.zg-spotlight-body {
+  overflow-y: auto;
+  padding: 8px;
+}
+.zg-spotlight-section-title {
+  padding: 8px 12px 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--zg-text-xdim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.zg-spotlight-result-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
-  border-radius: 7px;
-  font-size: 12px;
-  color: var(--zg-text);
+  padding: 10px 12px;
+  border-radius: 6px;
   cursor: pointer;
+  transition: background 0.1s, color 0.1s;
 }
-.zg-search-result.is-active,
-.zg-search-result:hover {
-  background: var(--zg-panel);
+.zg-spotlight-result-item.is-active {
+  background: var(--zg-accent-tint);
 }
-.zg-search-path {
+.zg-spotlight-result-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--zg-text);
+}
+.zg-spotlight-result-path {
+  font-size: 11px;
+  color: var(--zg-text-dim);
   font-family: var(--zg-mono);
-  font-size: 10.5px;
-  color: var(--zg-text-dim);
 }
-.zg-search-empty {
-  padding: 10px;
-  font-size: 12px;
-  color: var(--zg-text-dim);
+.zg-spotlight-empty {
+  padding: 30px;
   text-align: center;
+  font-size: 13px;
+  color: var(--zg-text-dim);
 }
+
 .zg-top-right {
   display: flex;
   align-items: center;
@@ -437,7 +499,6 @@ function refresh() {
 .zg-clock {
   display: flex;
   align-items: center;
-  gap: 6px;
   gap: 6px;
   font-family: var(--zg-mono);
   font-size: 12px;

@@ -17,11 +17,13 @@ function transformCategoryForUI(category) {
   const markets = {}
   category.marketSettings.forEach(ms => {
     const marketCode = MARKET_MAP[ms.marketId]
-    markets[marketCode] = {
-      enabled: ms.isActive,
-      min_listings: ms.minListings,
-      listing_count: 0,
-      vendor_count: 0
+    if (marketCode) {
+      markets[marketCode] = {
+        enabled: ms.isActive,
+        min_listings: ms.minListings,
+        listing_count: ms.listingCount ?? ms.listing_count ?? ms.productCount ?? ms.product_count ?? category.productCount ?? category.product_count ?? 0,
+        vendor_count: ms.vendorCount ?? ms.vendor_count ?? 0
+      }
     }
   })
   

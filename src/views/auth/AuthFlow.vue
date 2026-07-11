@@ -7,7 +7,7 @@
  * Email entered on SignInIdentity is passed to SignInPassword as a prop,
  * and both values are used for the real auth.login() call.
  */
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { findStep } from '@/data/authSteps';
 import { useAuthStore } from '@/stores/auth';
@@ -36,7 +36,6 @@ const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
 
-// ── Form state threaded across steps ──────────────────────
 const userEmail = ref('');
 const userPassword = ref('');
 
@@ -44,6 +43,24 @@ const step = computed(() => findStep(route.params.step));
 const current = computed(() => SCREENS[step.value.screen] || SignInIdentity);
 
 const go = (id) => router.push(`/auth/${id}`);
+
+// Redirect back to signin-id if accessing any post-identity step without email
+const checkEmailRequirement = () => {
+  const currentStepId = step.value?.id;
+  if (
+    currentStepId &&
+    currentStepId !== "signin-id" &&
+    currentStepId !== "forgot" &&
+    currentStepId !== "forgot-sent" &&
+    currentStepId !== "reset"
+  ) {
+    if (!userEmail.value) {
+      go("signin-id");
+    }
+  }
+};
+
+watch(() => route.params.step, checkEmailRequirement, { immediate: true });
 
 // Event → target-step routing table (mirrors the React onNext/onBack wiring).
 const NAV = {

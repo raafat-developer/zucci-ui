@@ -1,33 +1,95 @@
 <script setup>
-/**
- * VariantTypeDrawer — create/edit a variant type. Faithful port of
- * VariantTypeDrawer from zucci-variants.jsx: name/code, input type, status,
- * applies-to category chips, free-form options list (add/remove), requires-
- * size-chart toggle.
- */
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import ZDrawer from '@/components/ui/ZDrawer.vue';
 import { toast } from '@/composables/useToast';
+import { useLookupStore } from '@/stores/lookup.store';
+import http from '@/api/http';
 
 const props = defineProps({ open: { type: Boolean, default: false }, vtype: { type: Object, default: null } });
 const emit = defineEmits(['close', 'save']);
 
-const CATS = ['clothing', 'footwear', 'accessories', 'beauty', 'fragrance', 'kids', 'sportswear', 'jewellery'];
-const blank = () => ({ name: '', code: '', input_type: 'select', applies_to: [], options: [], status: 'active', requires_size_chart: false });
+const lookupStore = useLookupStore();
+const CATS = computed(() => {
+  const all = lookupStore.get("categories") || [];
+  return all.filter(c => !c.parentId).map(c => ({
+    id: c.id,
+    name: c.label || c.name || c.title || c.slug || ''
+  }));
+});
+
+const blank = () => ({
+  name: '',
+  code: '',
+  input_type: 'select',
+  categoryIds: [],
+  options: [],
+  status: 'active',
+  requires_size_chart: false
+});
 const v = ref(blank());
 const newOpt = ref('');
 
 watch(() => [props.open, props.vtype?.id], () => {
-  if (props.open) v.value = props.vtype ? { ...props.vtype, options: Array.isArray(props.vtype.options) ? props.vtype.options.map((o) => (typeof o === 'object' ? o.label : o)) : [] } : blank();
+  if (props.open) {
+    if (props.vtype) {
+      v.value = {
+        ...props.vtype,
+        categoryIds: props.vtype.categoryIds || [],
+        options: Array.isArray(props.vtype.options)
+          ? props.vtype.options.map((o) => (typeof o === 'object' ? o.label : o))
+          : []
+      };
+    } else {
+      v.value = blank();
+    }
+  }
 });
 
 const addOpt = () => { if (newOpt.value.trim()) { v.value.options = [...v.value.options, newOpt.value.trim()]; newOpt.value = ''; } };
 const removeOpt = (i) => { v.value.options = v.value.options.filter((_, idx) => idx !== i); };
-const toggleCat = (c) => { v.value.applies_to = v.value.applies_to.includes(c) ? v.value.applies_to.filter((x) => x !== c) : [...v.value.applies_to, c]; };
-const save = () => {
-  emit('save', { ...v.value });
-  toast.success(`Variant type ${props.vtype ? 'updated' : 'created'}: ${v.value.name}`);
-  emit('close');
+const toggleCat = (id) => {
+  v.value.categoryIds = v.value.categoryIds.includes(id)
+    ? v.value.categoryIds.filter((x) => x !== id)
+    : [...v.value.categoryIds, id];
+};
+const save = async () => {
+  const payload = {
+    name: v.value.name,
+    inputType: v.value.input_type === 'select' ? 1 : v.value.input_type === 'swatch_color' ? 3 : 2,
+    statusId: v.value.status === 'active' ? 1 : 2,
+    categoryIds: v.value.categoryIds,
+    options: v.value.options.map(o => {
+      const existing = props.vtype?.options?.find(orig => (typeof orig === 'object' ? orig.label : orig) === o);
+      if (existing && typeof existing === 'object') {
+        return {
+          id: existing.id,
+          label: o
+        };
+      }
+      return { label: o };
+    }),
+    requiresSizeChart: v.value.requires_size_chart
+  };
+
+  try {
+    if (props.vtype?.id) {
+      await http.patch(`/catalog/attributes/${props.vtype.id}`, payload);
+      toast.success(`Variant type updated: ${v.value.name}`);
+    } else {
+      const createPayload = {
+        ...payload,
+        code: v.value.code || v.value.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        options: v.value.options
+      };
+      await http.post("/catalog/attributes", createPayload);
+      toast.success(`Variant type created: ${v.value.name}`);
+    }
+    emit('save');
+    emit('close');
+  } catch (err) {
+    console.error("Failed to save variant type:", err);
+    toast.error(err.message || "Failed to save variant type");
+  }
 };
 </script>
 
@@ -54,11 +116,11 @@ const save = () => {
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button
           v-for="c in CATS"
-          :key="c"
+          :key="c.id"
           type="button"
-          :style="{ height:'26px', padding:'0 10px', borderRadius:'4px', border:'1px solid', cursor:'pointer', fontSize:'11px', fontFamily:'inherit', fontWeight:600, textTransform:'capitalize', color: v.applies_to.includes(c)?'var(--zg-accent)':'var(--zg-text-dim)', background: v.applies_to.includes(c)?'var(--zg-accent-tint)':'transparent', borderColor: v.applies_to.includes(c)?'var(--zg-accent)':'var(--zg-line)' }"
-          @click="toggleCat(c)"
-        >{{ c }}</button>
+          :style="{ height:'26px', padding:'0 10px', borderRadius:'4px', border:'1px solid', cursor:'pointer', fontSize:'11px', fontFamily:'inherit', fontWeight:600, textTransform:'capitalize', color: v.categoryIds.includes(c.id)?'var(--zg-accent)':'var(--zg-text-dim)', background: v.categoryIds.includes(c.id)?'var(--zg-accent-tint)':'transparent', borderColor: v.categoryIds.includes(c.id)?'var(--zg-accent)':'var(--zg-line)' }"
+          @click="toggleCat(c.id)"
+        >{{ c.name }}</button>
       </div>
 
       <div class="zcat-form-section-title" style="margin-top:6px">Options</div>
